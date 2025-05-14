@@ -1,9 +1,7 @@
-use std::{io::{self, stdout}, result};
 
-use crossterm::{
-    cursor, execute,
-    terminal::{self, ClearType},
-};
+use crossterm::
+    terminal::{self}
+;
 
 use crate::output_manager::OutputManager;
 
