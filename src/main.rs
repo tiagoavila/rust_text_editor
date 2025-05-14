@@ -1,16 +1,25 @@
 use std::{io, time::Duration};
 
-use cleanup::CleanUp;
-use content::Content;
 use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers},
     terminal,
 };
-use output_manager::OutputManager;
 
 mod cleanup;
 mod content;
 mod output_manager;
+mod text_trait;
+mod piece_table;
+
+mod prelude {
+    pub use crate::cleanup::*;
+    pub use crate::content::*;
+    pub use crate::output_manager::*;
+    pub use crate::text_trait::*;
+    pub use crate::piece_table::*;
+}
+
+use prelude::*;
 
 fn main() -> io::Result<()> {
     let _clean_up = CleanUp;
