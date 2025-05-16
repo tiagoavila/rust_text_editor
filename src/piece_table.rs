@@ -66,12 +66,12 @@ impl TextTrait for PieceTable {
                 let first_piece = Piece {
                     buffer_type: BufferType::Original,
                     start: 0,
-                    length: left.len()
+                    length: left.len(),
                 };
                 let last_piece = Piece {
                     buffer_type: BufferType::Original,
                     start: left.len(),
-                    length: right.len()
+                    length: right.len(),
                 };
 
                 self.pieces = vec![first_piece, new_piece, last_piece];
@@ -99,7 +99,6 @@ impl TextTrait for PieceTable {
                         self.pieces.insert(index + 1, new_piece);
                         break;
                     }
-
                 }
             }
         }
@@ -242,15 +241,15 @@ mod tests {
         // After all insertions, the pieces should represent:
         // [Say: ] [Hello ] [beautiful] [world] [!]
         let p = &piece_table.pieces;
-        assert_eq!(p[0].buffer_type, BufferType::Added);    // Say: 
+        assert_eq!(p[0].buffer_type, BufferType::Added); // Say:
         assert_eq!(p[0].start, 1);
         assert_eq!(p[0].length, 5);
 
-        assert_eq!(p[1].buffer_type, BufferType::Original); // Hello 
+        assert_eq!(p[1].buffer_type, BufferType::Original); // Hello
         assert_eq!(p[1].start, 0);
         assert_eq!(p[1].length, 5);
 
-        assert_eq!(p[2].buffer_type, BufferType::Added);    // beautiful
+        assert_eq!(p[2].buffer_type, BufferType::Added); // beautiful
         assert_eq!(p[2].start, 6);
         assert_eq!(p[2].length, 10);
 
@@ -258,7 +257,7 @@ mod tests {
         assert_eq!(p[3].start, 5);
         assert_eq!(p[3].length, 6);
 
-        assert_eq!(p[4].buffer_type, BufferType::Added);    // !
+        assert_eq!(p[4].buffer_type, BufferType::Added); // !
         assert_eq!(p[4].start, 0);
         assert_eq!(p[4].length, 1);
     }
@@ -301,23 +300,23 @@ mod tests {
         // The expected sequence is:
         // [Say: ] [Hello ] [beautiful] [ amazing] [ and cool] [world] [!]
         let p = &piece_table.pieces;
-        assert_eq!(p[0].buffer_type, BufferType::Added);    // Say: 
+        assert_eq!(p[0].buffer_type, BufferType::Added); // Say:
         assert_eq!(p[0].start, 1);
         assert_eq!(p[0].length, 5);
 
-        assert_eq!(p[1].buffer_type, BufferType::Original); // Hello 
+        assert_eq!(p[1].buffer_type, BufferType::Original); // Hello
         assert_eq!(p[1].start, 0);
         assert_eq!(p[1].length, 5);
 
-        assert_eq!(p[2].buffer_type, BufferType::Added);    // beautiful
+        assert_eq!(p[2].buffer_type, BufferType::Added); // beautiful
         assert_eq!(p[2].start, 6);
         assert_eq!(p[2].length, 10);
 
-        assert_eq!(p[3].buffer_type, BufferType::Added);    // amazing
+        assert_eq!(p[3].buffer_type, BufferType::Added); // amazing
         assert_eq!(p[3].start, 16);
         assert_eq!(p[3].length, 8);
 
-        assert_eq!(p[4].buffer_type, BufferType::Added);    // and cool
+        assert_eq!(p[4].buffer_type, BufferType::Added); // and cool
         assert_eq!(p[4].start, 24);
         assert_eq!(p[4].length, 9);
 
@@ -325,8 +324,103 @@ mod tests {
         assert_eq!(p[5].start, 5);
         assert_eq!(p[5].length, 6);
 
-        assert_eq!(p[6].buffer_type, BufferType::Added);    // !
+        assert_eq!(p[6].buffer_type, BufferType::Added); // !
         assert_eq!(p[6].start, 0);
         assert_eq!(p[6].length, 1);
+    }
+
+    #[test]
+    fn test_multiple_inserts_with_piece_splitting() {
+        // Create a piece table with some initial content
+        let mut piece_table = PieceTable::new("Hello World");
+
+        // Initially, we should have a single piece for the original content
+        assert_eq!(piece_table.pieces.len(), 1);
+        assert_eq!(piece_table.pieces[0].buffer_type, BufferType::Original);
+        assert_eq!(piece_table.pieces[0].start, 0);
+        assert_eq!(piece_table.pieces[0].length, 11); // "Hello World" is 11 characters
+
+        // Insert text at position 5 (between "Hello" and " World")
+        piece_table.add_text(" Beautiful", 5).unwrap();
+
+        // After the first insert, we should have 3 pieces:
+        // 1. "Hello" (original, 0-5)
+        // 2. " Beautiful" (added, 0-10)
+        // 3. " World" (original, 5-11)
+        assert_eq!(piece_table.pieces.len(), 3);
+
+        // Verify the first piece (original buffer, contains "Hello")
+        assert_eq!(piece_table.pieces[0].buffer_type, BufferType::Original);
+        assert_eq!(piece_table.pieces[0].start, 0);
+        assert_eq!(piece_table.pieces[0].length, 5);
+
+        // Verify the second piece (added buffer, contains " Beautiful")
+        assert_eq!(piece_table.pieces[1].buffer_type, BufferType::Added);
+        assert_eq!(piece_table.pieces[1].start, 0);
+        assert_eq!(piece_table.pieces[1].length, 10);
+
+        // Verify the third piece (original buffer, contains " World")
+        assert_eq!(piece_table.pieces[2].buffer_type, BufferType::Original);
+        assert_eq!(piece_table.pieces[2].start, 5);
+        assert_eq!(piece_table.pieces[2].length, 6);
+
+        // The logical content should now be "Hello Beautiful World"
+        assert_eq!(piece_table.add_buffer, " Beautiful");
+
+        // Insert another text at position 12 (between "Hello Beautiful" and " World")
+        // This should split the third piece
+        piece_table.add_text(" Amazing", 15).unwrap();
+
+        // After the second insert, we should have 5 pieces:
+        // 1. "Hello" (original, 0-5)
+        // 2. " Beautiful" (added, 0-10)
+        // 3. " " (original, 5-6) - first part of the split
+        // 4. " Amazing" (added, 10-18)
+        // 5. "World" (original, 6-11) - second part of the split
+        assert_eq!(piece_table.pieces.len(), 5);
+
+        // Check the fourth piece (new added text)
+        assert_eq!(piece_table.pieces[3].buffer_type, BufferType::Added);
+        assert_eq!(piece_table.pieces[3].start, 10);
+        assert_eq!(piece_table.pieces[3].length, 8);
+
+        // Check the fifth piece (second part of the split original)
+        assert_eq!(piece_table.pieces[4].buffer_type, BufferType::Original);
+        assert_eq!(piece_table.pieces[4].start, 6);
+        assert_eq!(piece_table.pieces[4].length, 5);
+
+        // Add text at the beginning
+        piece_table.add_text("Start: ", 0).unwrap();
+
+        // Should now have 6 pieces with the new one at the beginning
+        assert_eq!(piece_table.pieces.len(), 6);
+        assert_eq!(piece_table.pieces[0].buffer_type, BufferType::Added);
+        assert_eq!(piece_table.pieces[0].start, 18); // after previous additions
+        assert_eq!(piece_table.pieces[0].length, 7); // "Start: " is 7 chars
+
+        // Add text at the end (assuming we can calculate the total logical length)
+        let logical_length = piece_table.pieces.iter().map(|p| p.length).sum::<usize>();
+        piece_table.add_text("!", logical_length).unwrap();
+
+        // Should now have 7 pieces with the new one at the end
+        assert_eq!(piece_table.pieces.len(), 7);
+        assert_eq!(piece_table.pieces[6].buffer_type, BufferType::Added);
+        assert_eq!(piece_table.pieces[6].start, 25); // after previous additions
+        assert_eq!(piece_table.pieces[6].length, 1); // "!" is 1 char
+
+        // Add text in the middle of an added piece
+        // Need to calculate position which would be within the " Beautiful" piece
+        // "Start: " (7) + "Hello" (5) + part of " Beautiful", let's say at position 15
+        // This should split an already added piece
+        piece_table.add_text("-TEST-", 15).unwrap();
+
+        // Should now have 9 pieces (original 7 + 2 from the split)
+        assert_eq!(piece_table.pieces.len(), 9);
+
+        // The add_buffer should now contain all added text: " Beautiful Amazing" + "Start: " + "!" + "-TEST-"
+        assert_eq!(
+            piece_table.add_buffer,
+            format!("{}{}{}{}", " Beautiful Amazing", "Start: ", "!", "-TEST-")
+        );
     }
 }
