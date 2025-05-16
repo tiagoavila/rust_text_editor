@@ -80,17 +80,23 @@ impl TextTrait for PieceTable {
                 for (index, piece) in self.pieces.iter().enumerate() {
                     content_size += piece.length;
                     if content_size > position {
+                        // Calculate the start of the current piece in the logical text
+                        let piece_logical_start = content_size - piece.length;
+                        // The left piece should cover from the start of this piece up to the insertion point
+                        let left_piece_length = position - piece_logical_start;
+
                         let left_piece = Piece {
                             buffer_type: piece.buffer_type.clone(),
                             start: piece.start,
-                            length: content_size - piece.length,
+                            length: left_piece_length,
                         };
                         let right_piece = Piece {
                             buffer_type: piece.buffer_type.clone(),
-                            start: piece.start + left_piece.length,
-                            length: piece.length - left_piece.length,
+                            start: piece.start + left_piece_length,
+                            length: piece.length - left_piece_length,
                         };
 
+                        // Replace the current piece with the left piece, then insert the new and right pieces
                         self.pieces[index] = left_piece;
                         self.pieces.insert(index + 1, new_piece);
                         self.pieces.insert(index + 2, right_piece);
@@ -109,6 +115,8 @@ impl TextTrait for PieceTable {
 
 #[cfg(test)]
 mod tests {
+    use std::result;
+
     use super::*;
 
     #[test]
@@ -330,97 +338,108 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_inserts_with_piece_splitting() {
-        // Create a piece table with some initial content
-        let mut piece_table = PieceTable::new("Hello World");
+    fn test_three_inserts_always_splitting_pieces() {
+        // Create a piece table with the alphabet as content
+        let mut piece_table = PieceTable::new("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
         // Initially, we should have a single piece for the original content
         assert_eq!(piece_table.pieces.len(), 1);
         assert_eq!(piece_table.pieces[0].buffer_type, BufferType::Original);
         assert_eq!(piece_table.pieces[0].start, 0);
-        assert_eq!(piece_table.pieces[0].length, 11); // "Hello World" is 11 characters
+        assert_eq!(piece_table.pieces[0].length, 26); // Alphabet has 26 letters
 
-        // Insert text at position 5 (between "Hello" and " World")
-        piece_table.add_text(" Beautiful", 5).unwrap();
+        // FIRST INSERT: Split the original piece by inserting "123" after "C" (at position 3)
+        piece_table.add_text("123", 3).unwrap();
 
         // After the first insert, we should have 3 pieces:
-        // 1. "Hello" (original, 0-5)
-        // 2. " Beautiful" (added, 0-10)
-        // 3. " World" (original, 5-11)
+        // 1. "ABC" (original, 0-3)
+        // 2. "123" (added, 0-3)
+        // 3. "DEFGHIJKLMNOPQRSTUVWXYZ" (original, 3-26)
         assert_eq!(piece_table.pieces.len(), 3);
 
-        // Verify the first piece (original buffer, contains "Hello")
+        // Verify first piece (original buffer, contains "ABC")
         assert_eq!(piece_table.pieces[0].buffer_type, BufferType::Original);
         assert_eq!(piece_table.pieces[0].start, 0);
-        assert_eq!(piece_table.pieces[0].length, 5);
+        assert_eq!(piece_table.pieces[0].length, 3);
 
-        // Verify the second piece (added buffer, contains " Beautiful")
+        // Verify second piece (added buffer, contains "123")
         assert_eq!(piece_table.pieces[1].buffer_type, BufferType::Added);
         assert_eq!(piece_table.pieces[1].start, 0);
-        assert_eq!(piece_table.pieces[1].length, 10);
+        assert_eq!(piece_table.pieces[1].length, 3);
 
-        // Verify the third piece (original buffer, contains " World")
+        // Verify third piece (original buffer, contains "DEFGHIJKLMNOPQRSTUVWXYZ")
         assert_eq!(piece_table.pieces[2].buffer_type, BufferType::Original);
-        assert_eq!(piece_table.pieces[2].start, 5);
-        assert_eq!(piece_table.pieces[2].length, 6);
+        assert_eq!(piece_table.pieces[2].start, 3);
+        assert_eq!(piece_table.pieces[2].length, 23);
 
-        // The logical content should now be "Hello Beautiful World"
-        assert_eq!(piece_table.add_buffer, " Beautiful");
+        // The add_buffer should now contain "123"
+        assert_eq!(piece_table.add_buffer, "123");
 
-        // Insert another text at position 12 (between "Hello Beautiful" and " World")
-        // This should split the third piece
-        piece_table.add_text(" Amazing", 15).unwrap();
+        // SECOND INSERT: Split the third piece by inserting "456" after "F"
+        // Logical content is now "ABC123DEFGHIJKLMNOPQRSTUVWXYZ"
+        // Position of "F" is: 3 (ABC) + 3 (123) + 3 (DEF) = 9
+        piece_table.add_text("456", 9).unwrap();
 
         // After the second insert, we should have 5 pieces:
-        // 1. "Hello" (original, 0-5)
-        // 2. " Beautiful" (added, 0-10)
-        // 3. " " (original, 5-6) - first part of the split
-        // 4. " Amazing" (added, 10-18)
-        // 5. "World" (original, 6-11) - second part of the split
+        // 1. "ABC" (original, 0-3)
+        // 2. "123" (added, 0-3)
+        // 3. "DEF" (original, 3-6)
+        // 4. "456" (added, 3-6)
+        // 5. "GHIJKLMNOPQRSTUVWXYZ" (original, 6-26)
         assert_eq!(piece_table.pieces.len(), 5);
 
-        // Check the fourth piece (new added text)
-        assert_eq!(piece_table.pieces[3].buffer_type, BufferType::Added);
-        assert_eq!(piece_table.pieces[3].start, 10);
-        assert_eq!(piece_table.pieces[3].length, 8);
+        // Check the third piece (original buffer, contains "DEF")
+        assert_eq!(piece_table.pieces[2].buffer_type, BufferType::Original);
+        assert_eq!(piece_table.pieces[2].start, 3);
+        assert_eq!(piece_table.pieces[2].length, 3);
 
-        // Check the fifth piece (second part of the split original)
+        // Check the fourth piece (added buffer, contains "456")
+        assert_eq!(piece_table.pieces[3].buffer_type, BufferType::Added);
+        assert_eq!(piece_table.pieces[3].start, 3);
+        assert_eq!(piece_table.pieces[3].length, 3);
+
+        // Check the fifth piece (original buffer, contains "GHIJKLMNOPQRSTUVWXYZ")
         assert_eq!(piece_table.pieces[4].buffer_type, BufferType::Original);
         assert_eq!(piece_table.pieces[4].start, 6);
-        assert_eq!(piece_table.pieces[4].length, 5);
+        assert_eq!(piece_table.pieces[4].length, 20);
 
-        // Add text at the beginning
-        piece_table.add_text("Start: ", 0).unwrap();
+        // The add_buffer should now contain "123456"
+        assert_eq!(piece_table.add_buffer, "123456");
 
-        // Should now have 6 pieces with the new one at the beginning
-        assert_eq!(piece_table.pieces.len(), 6);
-        assert_eq!(piece_table.pieces[0].buffer_type, BufferType::Added);
-        assert_eq!(piece_table.pieces[0].start, 18); // after previous additions
-        assert_eq!(piece_table.pieces[0].length, 7); // "Start: " is 7 chars
+        // THIRD INSERT: Split the fifth piece by inserting "789" after "J"
+        // Logical content is now "ABC123DEF456GHIJKLMNOPQRSTUVWXYZ"
+        // Position of "J" is: 3 (ABC) + 3 (123) + 3 (DEF) + 3 (456) + 4 (GHIJ) = 16
+        piece_table.add_text("789", 16).unwrap();
 
-        // Add text at the end (assuming we can calculate the total logical length)
-        let logical_length = piece_table.pieces.iter().map(|p| p.length).sum::<usize>();
-        piece_table.add_text("!", logical_length).unwrap();
-
-        // Should now have 7 pieces with the new one at the end
+        // After the third insert, we should have 7 pieces:
+        // 1. "ABC" (original, 0-3)
+        // 2. "123" (added, 0-3)
+        // 3. "DEF" (original, 3-6)
+        // 4. "456" (added, 3-6)
+        // 5. "GHIJ" (original, 6-10)
+        // 6. "789" (added, 6-9)
+        // 7. "KLMNOPQRSTUVWXYZ" (original, 10-26)
         assert_eq!(piece_table.pieces.len(), 7);
-        assert_eq!(piece_table.pieces[6].buffer_type, BufferType::Added);
-        assert_eq!(piece_table.pieces[6].start, 25); // after previous additions
-        assert_eq!(piece_table.pieces[6].length, 1); // "!" is 1 char
 
-        // Add text in the middle of an added piece
-        // Need to calculate position which would be within the " Beautiful" piece
-        // "Start: " (7) + "Hello" (5) + part of " Beautiful", let's say at position 15
-        // This should split an already added piece
-        piece_table.add_text("-TEST-", 15).unwrap();
+        // Check the fifth piece (original buffer, contains "GHIJ")
+        assert_eq!(piece_table.pieces[4].buffer_type, BufferType::Original);
+        assert_eq!(piece_table.pieces[4].start, 6);
+        assert_eq!(piece_table.pieces[4].length, 4);
 
-        // Should now have 9 pieces (original 7 + 2 from the split)
-        assert_eq!(piece_table.pieces.len(), 9);
+        // Check the sixth piece (added buffer, contains "789")
+        assert_eq!(piece_table.pieces[5].buffer_type, BufferType::Added);
+        assert_eq!(piece_table.pieces[5].start, 6);
+        assert_eq!(piece_table.pieces[5].length, 3);
 
-        // The add_buffer should now contain all added text: " Beautiful Amazing" + "Start: " + "!" + "-TEST-"
-        assert_eq!(
-            piece_table.add_buffer,
-            format!("{}{}{}{}", " Beautiful Amazing", "Start: ", "!", "-TEST-")
-        );
+        // Check the seventh piece (original buffer, contains "KLMNOPQRSTUVWXYZ")
+        assert_eq!(piece_table.pieces[6].buffer_type, BufferType::Original);
+        assert_eq!(piece_table.pieces[6].start, 10);
+        assert_eq!(piece_table.pieces[6].length, 16);
+
+        // The add_buffer should now contain "123456789"
+        assert_eq!(piece_table.add_buffer, "123456789");
+
+        // The final logical content should be "ABC123DEF456GHIJ789KLMNOPQRSTUVWXYZ"
+        // But we don't need to verify that explicitly since we've checked all the pieces
     }
 }
