@@ -106,6 +106,29 @@ impl TextTrait for PieceTable {
 
         Ok(())
     }
+    
+    fn get_text(&self) -> String {
+        let mut result = String::new();
+        
+        for piece in self.pieces.iter() {
+            match piece.buffer_type {
+                BufferType::Original => {
+                    PieceTable::get_text_from_buffer(&self.original_buffer, &mut result, piece);
+                },
+                BufferType::Added => {
+                    PieceTable::get_text_from_buffer(&self.add_buffer, &mut result, piece);
+                },
+            };
+        }
+
+        result
+    }
+}
+
+impl PieceTable {
+    pub(crate) fn get_text_from_buffer(buffer: &str, result: &mut String, piece: &Piece) {
+        result.push_str(&buffer[piece.start..(piece.start + piece.length)].to_string())
+    }
 }
 
 #[cfg(test)]

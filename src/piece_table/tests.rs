@@ -288,7 +288,7 @@ fn test_three_inserts_always_splitting_pieces() {
     assert_eq!(piece_table.add_buffer, "123456");
 
     // THIRD INSERT: Split the fifth piece by inserting "789" after "J"
-    // Logical content is now "ABC123DEF456GHIJKLMNOPQRSTUVWXYZ"
+    // Logical content is now "ABC123DEF456GHIJ789KLMNOPQRSTUVWXYZ"
     // Position of "J" is: 3 (ABC) + 3 (123) + 3 (DEF) + 3 (456) + 4 (GHIJ) = 16
     piece_table.add_text("789", 16).unwrap();
 
@@ -322,4 +322,36 @@ fn test_three_inserts_always_splitting_pieces() {
 
     // The final logical content should be "ABC123DEF456GHIJ789KLMNOPQRSTUVWXYZ"
     // But we don't need to verify that explicitly since we've checked all the pieces
+}
+
+#[test]
+fn test_get_text() {
+    let mut piece_table = PieceTable::new("Hello world");
+
+    // Insert at the end
+    piece_table.add_text("!", 11).unwrap();
+    // Insert at the beginning
+    piece_table.add_text("Say: ", 0).unwrap();
+    // Insert in the middle (after "Say: Hello", position 10)
+    piece_table.add_text(" beautiful", 10).unwrap();
+
+    // The expected logical text is: "Say: Hello beautiful world!"
+    let result = piece_table.get_text();
+    assert_eq!(result, "Say: Hello beautiful world!");
+}
+
+#[test]
+fn test_get_text_with_alphabet_and_inserts() {
+    let mut piece_table = PieceTable::new("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+    // Insert "123" after "C" (at position 3)
+    piece_table.add_text("123", 3).unwrap();
+    // Insert "456" after "F" (position 9: 3 for "ABC", 3 for "123", 3 for "DEF")
+    piece_table.add_text("456", 9).unwrap();
+    // Insert "789" after "J" (position 16: 3+3+3+3+4)
+    piece_table.add_text("789", 16).unwrap();
+
+    // The expected logical text is: "ABC123DEF456GHIJ789KLMNOPQRSTUVWXYZ"
+    let result = piece_table.get_text();
+    assert_eq!(result, "ABC123DEF456GHIJ789KLMNOPQRSTUVWXYZ");
 }
