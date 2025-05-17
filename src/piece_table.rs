@@ -106,22 +106,59 @@ impl TextTrait for PieceTable {
 
         Ok(())
     }
-    
+
     fn get_text(&self) -> String {
         let mut result = String::new();
-        
+
         for piece in self.pieces.iter() {
             match piece.buffer_type {
                 BufferType::Original => {
                     PieceTable::get_text_from_buffer(&self.original_buffer, &mut result, piece);
-                },
+                }
                 BufferType::Added => {
                     PieceTable::get_text_from_buffer(&self.add_buffer, &mut result, piece);
-                },
+                }
             };
         }
 
         result
+    }
+
+    fn delete_text(&mut self, position: usize, length: usize) -> Result<(), String> {
+        let mut content_size: usize = 0;
+        let start_piece: Piece;
+        let end_piece: Piece;
+
+        for (index, piece) in self.pieces.iter().enumerate() {
+            content_size += piece.length;
+
+            let end_index = position + length;
+
+            // Delete text in the middle of a single piece, which results in 2 new pieces
+            if content_size > position && end_index < content_size {
+                // Calculate the start of the current piece in the logical text
+                let piece_logical_start = content_size - piece.length;
+                let left_piece = Piece {
+                    buffer_type: piece.buffer_type.clone(),
+                    start: piece_logical_start,
+                    length: position - piece_logical_start
+                };
+
+                let right_piece = Piece {
+                    buffer_type: piece.buffer_type.clone(),
+                    start: piece_logical_start + left_piece.length + length,
+                    length: piece.length - (left_piece.length + length)
+                };
+                
+                self.pieces[index] = left_piece;
+                self.pieces.insert(index + 1, right_piece);
+                break;
+            }
+
+            //handle deletion of text from multiple pieces
+        }
+
+        Ok(())
     }
 }
 

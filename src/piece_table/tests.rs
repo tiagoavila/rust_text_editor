@@ -355,3 +355,17 @@ fn test_get_text_with_alphabet_and_inserts() {
     let result = piece_table.get_text();
     assert_eq!(result, "ABC123DEF456GHIJ789KLMNOPQRSTUVWXYZ");
 }
+
+#[test]
+fn test_delete_text_removes_xs() {
+    let mut piece_table = PieceTable::new("ABCXXXXDEF");
+
+    // Delete the X's (positions 3 to 7, length 4)
+    let result = piece_table.delete_text(3, 4);
+
+    assert!(result.is_ok());
+
+    // The expected logical text is: "ABCDEF"
+    let text = piece_table.get_text();
+    assert_eq!(text, "ABCDEF");
+}
