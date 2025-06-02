@@ -124,47 +124,145 @@ impl TextTrait for PieceTable {
         result
     }
 
-    fn delete_text(&mut self, position: usize, length: usize) -> Result<(), String> {
-        let mut content_size: usize = 0;
-        let start_piece: Piece;
-        let end_piece: Piece;
-
-        for (index, piece) in self.pieces.iter().enumerate() {
-            content_size += piece.length;
-
-            let end_index = position + length;
-
-            // Delete text in the middle of a single piece, which results in 2 new pieces
-            if content_size > position && end_index < content_size {
-                // Calculate the start of the current piece in the logical text
-                let piece_logical_start = content_size - piece.length;
-                let left_piece = Piece {
-                    buffer_type: piece.buffer_type.clone(),
-                    start: piece_logical_start,
-                    length: position - piece_logical_start
-                };
-
-                let right_piece = Piece {
-                    buffer_type: piece.buffer_type.clone(),
-                    start: piece_logical_start + left_piece.length + length,
-                    length: piece.length - (left_piece.length + length)
-                };
-                
-                self.pieces[index] = left_piece;
-                self.pieces.insert(index + 1, right_piece);
-                break;
-            }
-
-            //handle deletion of text from multiple pieces
+    /// Deletes a range of text from the piece table using start and end indices.
+    /// 
+    /// This operation efficiently handles deletions by modifying the piece sequence
+    /// rather than actually moving text data. It can handle:
+    /// - Deletions within a single piece (splits the piece)
+    /// - Deletions spanning multiple pieces (removes/modifies affected pieces)
+    /// - Edge cases like deletions at text boundaries
+    /// 
+    /// # Arguments
+    /// * `start` - The starting index of the deletion (0-based, inclusive)
+    /// * `end` - The ending index of the deletion (0-based, exclusive)
+    /// 
+    /// # Returns
+    /// * `Ok(())` if deletion was successful
+    /// * `Err(String)` with error message if parameters are invalid
+    /// 
+    /// # Note
+    /// This uses the standard range convention where `start` is inclusive and `end` is exclusive,
+    /// meaning the deletion affects characters from `start` to `end - 1`.
+    fn delete_text(&mut self, start: usize, end: usize) -> Result<(), String> {
+        let total_len = self.total_length();
+        
+        // Validate deletion parameters
+        if start > total_len {
+            return Err(format!("Start index {} is beyond text length {}", start, total_len));
+        }
+        
+        if end > total_len {
+            return Err(format!("End index {} is beyond text length {}", end, total_len));
+        }
+        
+        if start > end {
+            return Err(format!("Start index {} cannot be greater than end index {}", start, end));
+        }
+        
+        // Handle trivial case - nothing to delete (empty range)
+        if start == end {
+            return Ok(());
         }
 
+        // Find pieces affected by the deletion by walking through the piece sequence
+        let mut current_pos = 0;          // Current position in the logical text
+        let mut start_piece_idx = None;   // Index of piece containing deletion start
+        let mut end_piece_idx = None;     // Index of piece containing deletion end
+        let mut start_offset = 0;         // Offset within start piece where deletion begins
+        let mut end_offset = 0;           // Offset within end piece where deletion ends
+
+        for (i, piece) in self.pieces.iter().enumerate() {
+            let piece_end = current_pos + piece.length;
+            
+            // Find the piece containing the start position
+            if start_piece_idx.is_none() && start >= current_pos && start < piece_end {
+                start_piece_idx = Some(i);
+                start_offset = start - current_pos;
+            }
+            
+            // Find the piece containing the end position
+            // Note: end can equal piece_end (deletion ends at piece boundary)
+            if end > current_pos && end <= piece_end {
+                end_piece_idx = Some(i);
+                end_offset = end - current_pos;
+                break;
+            }
+            
+            current_pos = piece_end;
+        }
+
+        let start_idx = start_piece_idx.ok_or("Could not find start piece")?;
+        let end_idx = end_piece_idx.unwrap_or(self.pieces.len() - 1);
+
+        // Build new piece sequence without the deleted content
+        let mut new_pieces = Vec::new();
+
+        // 1. Keep all pieces that come before the deletion range
+        new_pieces.extend_from_slice(&self.pieces[..start_idx]);
+
+        // 2. Handle the start piece - keep the part before the deletion starts
+        if start_offset > 0 {
+            let start_piece = &self.pieces[start_idx];
+            new_pieces.push(Piece {
+                buffer_type: start_piece.buffer_type.clone(),
+                start: start_piece.start,
+                length: start_offset,  // Only keep text before deletion
+            });
+        }
+
+        // 3. Handle the end piece - keep the part after the deletion ends
+        if end_idx < self.pieces.len() {
+            let end_piece = &self.pieces[end_idx];
+            if end_offset < end_piece.length {
+                new_pieces.push(Piece {
+                    buffer_type: end_piece.buffer_type.clone(),
+                    start: end_piece.start + end_offset,  // Skip the deleted part
+                    length: end_piece.length - end_offset, // Remaining length
+                });
+            }
+        }
+
+        // 4. Keep all pieces that come after the deletion range
+        if end_idx + 1 < self.pieces.len() {
+            new_pieces.extend_from_slice(&self.pieces[end_idx + 1..]);
+        }
+
+        // Replace the old piece sequence with the new one
+        self.pieces = new_pieces;
         Ok(())
     }
+
+}
+
+/// Calculates the number of characters to delete given a start and end position (inclusive).
+///
+/// # Arguments
+///
+/// * `start` - The starting index of the deletion (inclusive).
+/// * `end` - The ending index of the deletion (inclusive).
+///
+/// # Returns
+///
+/// The number of characters to delete.
+///
+/// # Example
+///
+/// ```
+/// let size = get_delete_size(3, 5);
+/// assert_eq!(size, 3); // Deletes positions 3, 4, and 5
+/// ```
+fn get_delete_size(start: usize, end: usize) -> usize {
+    end - start + 1
 }
 
 impl PieceTable {
     pub(crate) fn get_text_from_buffer(buffer: &str, result: &mut String, piece: &Piece) {
         result.push_str(&buffer[piece.start..(piece.start + piece.length)].to_string())
+    }
+
+    /// Calculates the total length of text represented by all pieces
+    fn total_length(&self) -> usize {
+        self.pieces.iter().map(|p| p.length).sum()
     }
 }
 

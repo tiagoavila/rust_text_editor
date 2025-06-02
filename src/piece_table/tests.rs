@@ -357,15 +357,62 @@ fn test_get_text_with_alphabet_and_inserts() {
 }
 
 #[test]
-fn test_delete_text_removes_xs() {
+fn test_delete_single_piece() {
+    // Test deletion within a single piece - should split the piece
+
     let mut piece_table = PieceTable::new("ABCXXXXDEF");
 
-    // Delete the X's (positions 3 to 7, length 4)
-    let result = piece_table.delete_text(3, 4);
+    // Delete the X's (positions 3 to 6, length 4)
+    let result = piece_table.delete_text(3, 6);
 
     assert!(result.is_ok());
 
     // The expected logical text is: "ABCDEF"
     let text = piece_table.get_text();
     assert_eq!(text, "ABCDEF");
+
+    // Same test but now with a piece table that has an added piece
+    let mut piece_table = PieceTable::new("DEFXXXXGHI");
+    piece_table.add_text("ABC", 0).unwrap();
+    let text = piece_table.get_text();
+    assert_eq!(text, "ABCDEFXXXXGHI");
+
+    // Delete the X's (positions 6 to 9, length 4)
+    let result = piece_table.delete_text(6, 9);
+
+    assert!(result.is_ok());
+
+    // The expected logical text is: "ABCDEF"
+    let text = piece_table.get_text();
+    assert_eq!(text, "ABCDEFGHI");
+}
+
+#[test]
+fn test_delete_text_middle_to_end_of_a_piece() {
+    // Test deletion from the end of text
+    // let mut piece_table = PieceTable::new("ABCDEFXXXX");
+
+    // // Delete the X's (positions 6 to 9, length 4)
+    // let result = piece_table.delete_text(6, 9);
+
+    // assert!(result.is_ok());
+
+    // // The expected logical text is: "ABCDEF"
+    // let text = piece_table.get_text();
+    // assert_eq!(text, "ABCDEF");
+
+    // Same test but now with a piece table that has an added piece
+    let mut piece_table = PieceTable::new("DEFGHIXXXX");
+    piece_table.add_text("ABC", 0).unwrap();
+    let text = piece_table.get_text();
+    assert_eq!(text, "ABCDEFGHIXXXX");
+
+    // Delete the X's (positions 9 to 12, length 4)
+    let result = piece_table.delete_text(9, 12);
+
+    assert!(result.is_ok());
+
+    // The expected logical text is: "ABCDEF"
+    let text = piece_table.get_text();
+    assert_eq!(text, "ABCDEFGHI");
 }
