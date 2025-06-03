@@ -388,7 +388,7 @@ fn test_delete_single_piece() {
 }
 
 #[test]
-fn test_delete_text_middle_to_end_of_a_piece() {
+fn test_delete_text_to_the_end_of_a_piece() {
     // Test deletion from the end of text
     // let mut piece_table = PieceTable::new("ABCDEFXXXX");
 
@@ -415,4 +415,55 @@ fn test_delete_text_middle_to_end_of_a_piece() {
     // The expected logical text is: "ABCDEF"
     let text = piece_table.get_text();
     assert_eq!(text, "ABCDEFGHI");
+}
+
+#[test]
+fn test_delete_text_at_start_of_a_piece() {
+    // Test deletion from the start of text
+    let mut piece_table = PieceTable::new("XXXXABCDEF");
+
+    // Delete the X's (positions 0 to 3, length 4)
+    let result = piece_table.delete_text(0, 3);
+
+    assert!(result.is_ok());
+
+    // The expected logical text is: "ABCDEF"
+    let text = piece_table.get_text();
+    assert_eq!(text, "ABCDEF");
+
+    // Same test but now with a piece table that has an added piece
+    let mut piece_table = PieceTable::new("XXXXDEFGHI");
+    piece_table.add_text("ABC", 0).unwrap();
+    let text = piece_table.get_text();
+    assert_eq!(text, "ABCXXXXDEFGHI");
+
+    // Delete the X's (positions 0 to 3, length 4)
+    let result = piece_table.delete_text(3, 6);
+
+    assert!(result.is_ok());
+
+    // The expected logical text is: "ABCDEFGHI"
+    let text = piece_table.get_text();
+    assert_eq!(text, "ABCDEFGHI");
+}
+
+#[test]
+fn test_delete_across_multiple_pieces() {
+    // Start with "ABCDEFGHIJ"
+    let mut piece_table = PieceTable::new("ABCDEFGHIJ");
+    // Insert "123" after "B" (at position 2): "AB123CDEFGHIJ"
+    piece_table.add_text("123", 2).unwrap();
+    // Insert "XYZ" after "F" (position 8: 2 for "AB", 3 for "123", 3 for "CDE", so after "F")
+    piece_table.add_text("XYZ", 8).unwrap();
+    // Now the logical text is: "AB123CDEFXYZGHIJ"
+    // Pieces: [AB][123][CDEF][XYZ][GHIJ]
+
+    // Delete from position 3 (the '2' in "123") to position 10 (the 'Y' in "XYZ")
+    // This should delete: "23CDEFXY"
+    let result = piece_table.delete_text(3, 10);
+    assert!(result.is_ok());
+
+    // The expected logical text is: "AB1ZGHIJ"
+    let text = piece_table.get_text();
+    assert_eq!(text, "AB1ZGHIJ");
 }
