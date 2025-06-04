@@ -22,6 +22,19 @@ enum BufferType {
 }
 
 impl TextTrait for PieceTable {
+    /// Creates a new `PieceTable` from the given text.
+    ///
+    /// # Arguments
+    /// * `text` - The initial text to populate the piece table.
+    ///
+    /// # Returns
+    /// A new `PieceTable` instance containing the provided text as the original buffer.
+    ///
+    /// # Example
+    /// ```
+    /// let pt = PieceTable::new("hello");
+    /// assert_eq!(pt.get_text(), "hello");
+    /// ```
     fn new(text: &str) -> Self {
         let original_buffer = text.to_string();
         let pieces: Vec<Piece> = vec![Piece {
@@ -37,6 +50,26 @@ impl TextTrait for PieceTable {
         }
     }
 
+    /// Inserts new text at the specified position in the piece table.
+    ///
+    /// This operation efficiently adds text by updating the piece sequence,
+    /// without moving existing text data. Handles insertions at any position,
+    /// including splitting existing pieces as needed.
+    ///
+    /// # Arguments
+    /// * `text` - The text to insert.
+    /// * `position` - The position (0-based) at which to insert the text.
+    ///
+    /// # Returns
+    /// * `Ok(())` if insertion was successful.
+    /// * `Err(String)` with an error message if the position is invalid.
+    ///
+    /// # Example
+    /// ```
+    /// let mut pt = PieceTable::new("abc");
+    /// pt.add_text("X", 1).unwrap();
+    /// assert_eq!(pt.get_text(), "aXbc");
+    /// ```
     fn add_text(&mut self, text: &str, position: usize) -> Result<(), String> {
         if text.is_empty() {
             return Ok(());
@@ -70,6 +103,7 @@ impl TextTrait for PieceTable {
         let mut split_offset = 0;
 
         for (index, piece) in self.pieces.iter().enumerate() {
+            // Find the piece where the insertion should happen
             if position <= current_pos + piece.length {
                 insert_idx = index;
                 split_offset = position - current_pos;
@@ -130,9 +164,25 @@ impl TextTrait for PieceTable {
         Ok(())
     }
 
+    /// Returns the full text represented by the piece table as a `String`.
+    ///
+    /// This method reconstructs the current state of the text by iterating
+    /// through all pieces and concatenating their corresponding slices from
+    /// the original and added buffers.
+    ///
+    /// # Returns
+    /// A `String` containing the current text.
+    ///
+    /// # Example
+    /// ```
+    /// let mut pt = PieceTable::new("abc");
+    /// pt.add_text("X", 1).unwrap();
+    /// assert_eq!(pt.get_text(), "aXbc");
+    /// ```
     fn get_text(&self) -> String {
         let mut result = String::new();
 
+        // Iterate over each piece and append its text to the result
         for piece in self.pieces.iter() {
             match piece.buffer_type {
                 BufferType::Original => {
@@ -147,7 +197,7 @@ impl TextTrait for PieceTable {
         result
     }
 
-    /// deletes a range of text from the piece table using start and end indices.
+    /// Deletes a range of text from the piece table using start and end indices.
     ///
     /// This operation efficiently handles deletions by modifying the piece sequence
     /// rather than actually moving text data. It can handle:
@@ -166,6 +216,13 @@ impl TextTrait for PieceTable {
     /// # Note
     /// This uses the standard range convention where `start` is inclusive and `end` is exclusive,
     /// meaning the deletion affects characters from `start` to `end - 1`.
+    ///
+    /// # Example
+    /// ```
+    /// let mut pt = PieceTable::new("abcdef");
+    /// pt.delete_text(2, 4).unwrap();
+    /// assert_eq!(pt.get_text(), "abef");
+    /// ```
     fn delete_text(&mut self, start: usize, end: usize) -> Result<(), String> {
         let total_len = self.total_length();
 
