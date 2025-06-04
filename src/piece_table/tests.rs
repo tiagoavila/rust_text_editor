@@ -457,6 +457,7 @@ fn test_delete_across_multiple_pieces() {
     piece_table.add_text("XYZ", 8).unwrap();
     // Now the logical text is: "AB123CDEFXYZGHIJ"
     // Pieces: [AB][123][CDEF][XYZ][GHIJ]
+    assert_eq!(piece_table.get_text(), "AB123CDEXYZFGHIJ");
 
     // Delete from position 3 (the '2' in "123") to position 10 (the 'Y' in "XYZ")
     // This should delete: "23CDEFXY"
@@ -465,5 +466,44 @@ fn test_delete_across_multiple_pieces() {
 
     // The expected logical text is: "AB1ZGHIJ"
     let text = piece_table.get_text();
-    assert_eq!(text, "AB1ZGHIJ");
+    assert_eq!(text, "AB1FGHIJ");
+}
+
+#[test]
+fn test_add_text_across_multiple_pieces() {
+    // Start with "ABCDEFGHIJ"
+    let mut piece_table = PieceTable::new("ABCDEFGHIJ");
+    // Insert "123" after "B" (at position 2): "AB123CDEFGHIJ"
+    piece_table.add_text("123", 2).unwrap();
+    // Insert "XYZ" after "F" (position 8: 2 for "AB", 3 for "123", 3 for "CDE", so after "F")
+    piece_table.add_text("XYZ", 8).unwrap();
+
+    // The expected logical text is: "AB123CDEFXYZGHIJ"
+    let text = piece_table.get_text();
+    assert_eq!(text, "AB123CDEXYZFGHIJ");
+
+    // Check the pieces for correctness
+    let p = &piece_table.pieces;
+    assert_eq!(p.len(), 5);
+
+    // [AB][123][CDEF][XYZ][GHIJ]
+    assert_eq!(p[0].buffer_type, BufferType::Original);
+    assert_eq!(p[0].start, 0);
+    assert_eq!(p[0].length, 2);
+
+    assert_eq!(p[1].buffer_type, BufferType::Added);
+    assert_eq!(p[1].start, 0);
+    assert_eq!(p[1].length, 3);
+
+    assert_eq!(p[2].buffer_type, BufferType::Original);
+    assert_eq!(p[2].start, 2);
+    assert_eq!(p[2].length, 3);
+
+    assert_eq!(p[3].buffer_type, BufferType::Added);
+    assert_eq!(p[3].start, 3);
+    assert_eq!(p[3].length, 3);
+
+    assert_eq!(p[4].buffer_type, BufferType::Original);
+    assert_eq!(p[4].start, 5);
+    assert_eq!(p[4].length, 5);
 }

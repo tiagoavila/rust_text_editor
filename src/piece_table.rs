@@ -42,65 +42,88 @@ impl TextTrait for PieceTable {
             return Ok(());
         }
 
-        let piece_start_position = self.add_buffer.len();
+        let total_len = self.total_length();
+        if position > total_len {
+            return Err(format!(
+                "Position {} is beyond text length {}",
+                position, total_len
+            ));
+        }
+
+        // Add the new text to the add buffer and create a piece for it
+        let add_start = self.add_buffer.len();
         self.add_buffer.push_str(text);
 
-        let new_piece = Piece {
-            buffer_type: BufferType::Added,
-            start: piece_start_position,
-            length: text.len(),
-        };
+        // Handle insertion into empty document
+        if position == 0 && self.pieces.is_empty() {
+            self.pieces.push(Piece {
+                buffer_type: BufferType::Added,
+                start: add_start,
+                length: text.len(),
+            });
+            return Ok(());
+        }
 
-        if position == 0 {
-            self.pieces.insert(0, new_piece);
-        } else if position == self.original_buffer.len() {
-            self.pieces.push(new_piece);
+        // Find where to insert the new piece
+        let mut current_pos = 0;
+        let mut insert_idx = self.pieces.len(); // Default to end if not found
+        let mut split_offset = 0;
+
+        for (i, piece) in self.pieces.iter().enumerate() {
+            if position <= current_pos + piece.length {
+                insert_idx = i;
+                split_offset = position - current_pos;
+                break;
+            }
+            current_pos += piece.length;
+        }
+
+        if insert_idx == self.pieces.len() {
+            // Insert at the very end - just append the new piece
+            self.pieces.push(Piece {
+                buffer_type: BufferType::Added,
+                start: add_start,
+                length: text.len(),
+            });
         } else {
-            if self.pieces.len() == 1 {
-                let (left, right) = self.original_buffer.split_at(position);
-                let first_piece = Piece {
-                    buffer_type: BufferType::Original,
-                    start: 0,
-                    length: left.len(),
-                };
-                let last_piece = Piece {
-                    buffer_type: BufferType::Original,
-                    start: left.len(),
-                    length: right.len(),
-                };
+            // Insert in the middle - need to split an existing piece
+            let piece = self.pieces[insert_idx].clone();
+            self.pieces.remove(insert_idx);
 
-                self.pieces = vec![first_piece, new_piece, last_piece];
-            } else {
-                let mut content_size = 0;
-                for (index, piece) in self.pieces.iter().enumerate() {
-                    content_size += piece.length;
-                    if content_size > position {
-                        // Calculate the start of the current piece in the logical text
-                        let piece_logical_start = content_size - piece.length;
-                        // The left piece should cover from the start of this piece up to the insertion point
-                        let left_piece_length = position - piece_logical_start;
+            // Insert left part of the split piece (if any)
+            if split_offset > 0 {
+                self.pieces.insert(
+                    insert_idx,
+                    Piece {
+                        buffer_type: piece.buffer_type.clone(),
+                        start: piece.start,
+                        length: split_offset,
+                    },
+                );
+                insert_idx += 1;
+            }
 
-                        let left_piece = Piece {
-                            buffer_type: piece.buffer_type.clone(),
-                            start: piece.start,
-                            length: left_piece_length,
-                        };
-                        let right_piece = Piece {
-                            buffer_type: piece.buffer_type.clone(),
-                            start: piece.start + left_piece_length,
-                            length: piece.length - left_piece_length,
-                        };
+            // Insert the new text piece
+            self.pieces.insert(
+                insert_idx,
+                Piece {
+                    buffer_type: BufferType::Added,
+                    start: add_start,
+                    length: text.len(),
+                },
+            );
+            insert_idx += 1;
 
-                        // Replace the current piece with the left piece, then insert the new and right pieces
-                        self.pieces[index] = left_piece;
-                        self.pieces.insert(index + 1, new_piece);
-                        self.pieces.insert(index + 2, right_piece);
-                        break;
-                    } else if content_size == position {
-                        self.pieces.insert(index + 1, new_piece);
-                        break;
-                    }
-                }
+            // Insert right part of the split piece (if any)
+            if split_offset < piece.length {
+                self.pieces.insert(
+                    insert_idx,
+                    Piece {
+                        buffer_type: piece.buffer_type,
+                        start: piece.start + split_offset,
+                        length: piece.length - split_offset,
+                    },
+                );
             }
         }
 
@@ -125,61 +148,70 @@ impl TextTrait for PieceTable {
     }
 
     /// deletes a range of text from the piece table using start and end indices.
-    /// 
+    ///
     /// This operation efficiently handles deletions by modifying the piece sequence
     /// rather than actually moving text data. It can handle:
     /// - Deletions within a single piece (splits the piece)
     /// - Deletions spanning multiple pieces (removes/modifies affected pieces)
     /// - Edge cases like deletions at text boundaries
-    /// 
+    ///
     /// # Arguments
     /// * `start` - The starting index of the deletion (0-based, inclusive)
     /// * `end` - The ending index of the deletion (0-based, exclusive)
-    /// 
+    ///
     /// # Returns
     /// * `Ok(())` if deletion was successful
     /// * `Err(String)` with error message if parameters are invalid
-    /// 
+    ///
     /// # Note
     /// This uses the standard range convention where `start` is inclusive and `end` is exclusive,
     /// meaning the deletion affects characters from `start` to `end - 1`.
     fn delete_text(&mut self, start: usize, end: usize) -> Result<(), String> {
         let total_len = self.total_length();
-        
+
         // Validate deletion parameters
         if start > total_len {
-            return Err(format!("Start index {} is beyond text length {}", start, total_len));
+            return Err(format!(
+                "Start index {} is beyond text length {}",
+                start, total_len
+            ));
         }
-        
+
         if end > total_len {
-            return Err(format!("End index {} is beyond text length {}", end, total_len));
+            return Err(format!(
+                "End index {} is beyond text length {}",
+                end, total_len
+            ));
         }
-        
+
         if start > end {
-            return Err(format!("Start index {} cannot be greater than end index {}", start, end));
+            return Err(format!(
+                "Start index {} cannot be greater than end index {}",
+                start, end
+            ));
         }
-        
+
         // Handle trivial case - nothing to delete (empty range)
         if start == end {
             return Ok(());
         }
 
         // Find pieces affected by the deletion by walking through the piece sequence
-        let mut current_pos = 0;          // Current position in the logical text
-        let mut start_piece_idx = None;   // Index of piece containing deletion start
-        let mut end_piece_idx = None;     // Index of piece containing deletion end
-        let mut start_offset = 0;         // Offset within start piece where deletion begins
-        let mut end_offset = 0;           // Offset within end piece where deletion ends
+        let mut current_pos = 0; // Current position in the logical text
+        let mut start_piece_idx = None; // Index of piece containing deletion start
+        let mut end_piece_idx = None; // Index of piece containing deletion end
+        let mut start_offset = 0; // Offset within start piece where deletion begins
+        let mut end_offset = 0; // Offset within end piece where deletion ends
 
         for (i, piece) in self.pieces.iter().enumerate() {
             let piece_end = current_pos + piece.length;
-            
+
             // Find the piece containing the start position
             if start_piece_idx.is_none() && start >= current_pos && start < piece_end {
                 start_piece_idx = Some(i);
                 start_offset = start - current_pos;
             }
-            
+
             // Find the piece containing the end position
             // Note: end can equal piece_end (deletion ends at piece boundary)
             if end > current_pos && end <= piece_end {
@@ -187,7 +219,7 @@ impl TextTrait for PieceTable {
                 end_offset = end - current_pos;
                 break;
             }
-            
+
             current_pos = piece_end;
         }
 
@@ -206,7 +238,7 @@ impl TextTrait for PieceTable {
             new_pieces.push(Piece {
                 buffer_type: start_piece.buffer_type.clone(),
                 start: start_piece.start,
-                length: start_offset,  // Only keep text before deletion
+                length: start_offset, // Only keep text before deletion
             });
         }
 
@@ -216,7 +248,7 @@ impl TextTrait for PieceTable {
             if end_offset < end_piece.length {
                 new_pieces.push(Piece {
                     buffer_type: end_piece.buffer_type.clone(),
-                    start: end_piece.start + end_offset + 1,  // Skip the deleted part
+                    start: end_piece.start + end_offset + 1, // Skip the deleted part
                     length: end_piece.length - end_offset - 1, // Remaining length
                 });
             }
