@@ -51,14 +51,14 @@ impl TextTrait for PieceTable {
         }
 
         // Add the new text to the add buffer and create a piece for it
-        let add_start = self.add_buffer.len();
+        let new_piece_start_position = self.add_buffer.len();
         self.add_buffer.push_str(text);
 
         // Handle insertion into empty document
         if position == 0 && self.pieces.is_empty() {
             self.pieces.push(Piece {
                 buffer_type: BufferType::Added,
-                start: add_start,
+                start: new_piece_start_position,
                 length: text.len(),
             });
             return Ok(());
@@ -69,9 +69,9 @@ impl TextTrait for PieceTable {
         let mut insert_idx = self.pieces.len(); // Default to end if not found
         let mut split_offset = 0;
 
-        for (i, piece) in self.pieces.iter().enumerate() {
+        for (index, piece) in self.pieces.iter().enumerate() {
             if position <= current_pos + piece.length {
-                insert_idx = i;
+                insert_idx = index;
                 split_offset = position - current_pos;
                 break;
             }
@@ -82,7 +82,7 @@ impl TextTrait for PieceTable {
             // Insert at the very end - just append the new piece
             self.pieces.push(Piece {
                 buffer_type: BufferType::Added,
-                start: add_start,
+                start: new_piece_start_position,
                 length: text.len(),
             });
         } else {
@@ -108,7 +108,7 @@ impl TextTrait for PieceTable {
                 insert_idx,
                 Piece {
                     buffer_type: BufferType::Added,
-                    start: add_start,
+                    start: new_piece_start_position,
                     length: text.len(),
                 },
             );
