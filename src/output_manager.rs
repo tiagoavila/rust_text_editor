@@ -5,7 +5,7 @@ use crossterm::{
     terminal::{self, ClearType},
 };
 
-use crate::content::Content;
+use crate::editor::Editor;
 
 pub struct OutputManager;
 
@@ -18,12 +18,12 @@ impl OutputManager {
         )
     }
 
-    pub fn refresh_screen(content: &Content) -> io::Result<()> {
+    pub fn refresh_screen(content: &Editor) -> io::Result<()> {
         OutputManager::clear_screen()?;
-        println!("{}", content.content);
+        println!("{}", content.text);
         execute!(
             stdout(),
-            cursor::MoveTo(content.cursor_position.x, content.cursor_position.y)
+            cursor::MoveTo(content.cursor_position as u16, 0)
         )
     }
 }

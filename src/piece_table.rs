@@ -349,7 +349,7 @@ impl PieceTable {
     }
 
     /// Calculates the total length of text represented by all pieces
-    fn total_length(&self) -> usize {
+    pub fn total_length(&self) -> usize {
         self.pieces.iter().map(|p| p.length).sum()
     }
 }

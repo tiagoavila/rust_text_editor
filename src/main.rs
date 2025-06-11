@@ -10,6 +10,7 @@ mod content;
 mod output_manager;
 mod text_trait;
 mod piece_table;
+mod editor;
 
 mod prelude {
     pub use crate::cleanup::*;
@@ -17,6 +18,7 @@ mod prelude {
     pub use crate::output_manager::*;
     pub use crate::text_trait::*;
     pub use crate::piece_table::*;
+    pub use crate::editor::*;
 }
 
 use prelude::*;
@@ -26,10 +28,11 @@ fn main() -> io::Result<()> {
     terminal::enable_raw_mode()?;
     OutputManager::clear_screen()?;
 
-    let mut content = Content::new();
+    let mut content = Editor::new(String::from("Hello World"), 5);
+    OutputManager::refresh_screen(&content)?;
 
     loop {
-        if poll(Duration::from_millis(500))? {
+        if poll(Duration::from_millis(1000))? {
             if let Event::Key(event) = read().expect("Failed to read line") {
                 match event {
                     KeyEvent {
@@ -58,8 +61,8 @@ fn main() -> io::Result<()> {
                         match direction {
                             KeyCode::Left => content.move_cursor_left(),
                             KeyCode::Right => content.move_cursor_right(),
-                            KeyCode::Up => content.move_cursor_up(),
-                            KeyCode::Down => content.move_cursor_down(),
+                            // KeyCode::Up => content.move_cursor_up(),
+                            // KeyCode::Down => content.move_cursor_down(),
                             _ => unreachable!(),
                         }
                         OutputManager::refresh_screen(&content)?;
@@ -74,6 +77,8 @@ fn main() -> io::Result<()> {
             };
         } else {
             // Timeout expired, no `Event` is available
+            // content.persist_temporary_buffer();
+            // OutputManager::refresh_screen(&content)?;
         }
     }
 
