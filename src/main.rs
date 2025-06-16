@@ -11,6 +11,7 @@ mod output_manager;
 mod text_trait;
 mod piece_table;
 mod editor;
+mod temporary_buffer;
 
 mod prelude {
     pub use crate::cleanup::*;
@@ -19,6 +20,7 @@ mod prelude {
     pub use crate::text_trait::*;
     pub use crate::piece_table::*;
     pub use crate::editor::*;
+    pub use crate::temporary_buffer::*;
 }
 
 use prelude::*;

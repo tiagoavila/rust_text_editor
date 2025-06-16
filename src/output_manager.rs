@@ -20,7 +20,7 @@ impl OutputManager {
 
     pub fn refresh_screen(content: &Editor) -> io::Result<()> {
         OutputManager::clear_screen()?;
-        println!("{}", content.text);
+        println!("{}", content.get_text());
         execute!(
             stdout(),
             cursor::MoveTo(content.cursor_position as u16, 0)
