@@ -11,16 +11,19 @@ mod output_manager;
 mod text_trait;
 mod piece_table;
 mod editor;
-mod temporary_buffer;
+mod temporary_buffer_add;
+mod temporary_buffer_deletion;
+mod enum_add_result;
 
 mod prelude {
     pub use crate::cleanup::*;
-    pub use crate::content::*;
     pub use crate::output_manager::*;
     pub use crate::text_trait::*;
     pub use crate::piece_table::*;
     pub use crate::editor::*;
-    pub use crate::temporary_buffer::*;
+    pub use crate::temporary_buffer_add::*;
+    pub use crate::temporary_buffer_deletion::*;
+    pub use crate::enum_add_result::*;
 }
 
 use prelude::*;
@@ -46,7 +49,7 @@ fn main() -> io::Result<()> {
                         code: KeyCode::Backspace,
                         ..
                     } => {
-                        content.remove_char();
+                        content.delete_char();
                         OutputManager::refresh_screen(&content)?;
                     }
                     KeyEvent {

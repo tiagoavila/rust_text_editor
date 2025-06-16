@@ -1,12 +1,10 @@
-use crate::{
-    prelude::{PieceTable, TextTrait},
-    temporary_buffer::TemporaryBuffer,
-};
+use crate::prelude::{EnumAddResult, PieceTable, TemporaryBufferAddText, TemporaryBufferDeleteText, TextTrait};
 
 pub struct Editor {
     content: PieceTable,
     pub cursor_position: usize,
-    pub temporary_buffer: TemporaryBuffer,
+    pub temporary_buffer_add: TemporaryBufferAddText,
+    pub temporary_buffer_delete: TemporaryBufferDeleteText,
 }
 
 impl Editor {
@@ -19,20 +17,21 @@ impl Editor {
 
         Self {
             content: PieceTable::new(&text.clone()),
-            temporary_buffer: TemporaryBuffer::new(temporary_buffer_max_length, cursor_position),
+            temporary_buffer_add: TemporaryBufferAddText::new(temporary_buffer_max_length, cursor_position),
+            temporary_buffer_delete: TemporaryBufferDeleteText::new(temporary_buffer_max_length),
             cursor_position,
         }
     }
 
     pub fn add_char(&mut self, c: char) {
-        use crate::temporary_buffer::AddResult;
+        use crate::prelude::EnumAddResult;
 
-        let add_result = self.temporary_buffer.add_char(c);
+        let add_result = self.temporary_buffer_add.add_char(c);
 
         self.cursor_position += 1;
 
         // Persist the buffer if AddResult::MustPersist is returned
-        if let Ok(AddResult::MustPersist) = add_result {
+        if let Ok(EnumAddResult::MustPersist) = add_result {
             self.persist_temporary_buffer(true);
         }
     }
@@ -41,18 +40,30 @@ impl Editor {
         let mut content = self.content.get_text();
 
         // Insert the temporary buffer at its position if it's not empty
-        if !self.temporary_buffer.buffer.is_empty() {
-            let pos = self.temporary_buffer.position;
-            content.insert_str(pos, &self.temporary_buffer.buffer);
+        if !self.temporary_buffer_add.buffer.is_empty() {
+            let pos = self.temporary_buffer_add.position;
+            content.insert_str(pos, &self.temporary_buffer_add.buffer);
         }
 
         content
     }
 
-    pub fn remove_char(&mut self) {
+    pub fn delete_char(&mut self) {
         if self.cursor_position > 0 {
-            // self.content.pop();
+            let deleted_position = self.cursor_position;
             self.cursor_position -= 1;
+
+            // If the cursor is on the temporary buffer add, remove a character from it
+            if !self.temporary_buffer_add.buffer.is_empty() && self.temporary_buffer_add.is_cursor_on_buffer(self.cursor_position) {
+                self.temporary_buffer_add.delete_char();
+            } else {
+                if let Ok(EnumAddResult::MustPersist) = self.temporary_buffer_delete.add_char(deleted_position) {
+                    // If the delete buffer is full, then delete the text range from the piece table
+                    if let Some((start, end)) = self.temporary_buffer_delete.get_deletion_range() {
+                        let _ = self.content.delete_text(start, end);
+                    }
+                }
+            }
         }
     }
 
@@ -60,7 +71,7 @@ impl Editor {
         if self.cursor_position > 0 {
             self.cursor_position -= 1;
             self.persist_temporary_buffer(true);
-            self.temporary_buffer.update_position(self.cursor_position);
+            self.temporary_buffer_add.update_position(self.cursor_position);
         }
     }
 
@@ -68,7 +79,7 @@ impl Editor {
         if self.cursor_position < self.content.total_length() {
             self.cursor_position += 1;
             self.persist_temporary_buffer(true);
-            self.temporary_buffer.update_position(self.cursor_position);
+            self.temporary_buffer_add.update_position(self.cursor_position);
         }
     }
 
@@ -104,18 +115,18 @@ impl Editor {
     /// After persisting, the buffer is cleared and the buffer position is updated to the
     /// current cursor position.
     pub fn persist_temporary_buffer(&mut self, force_save: bool) {
-        if self.temporary_buffer.buffer.is_empty() {
+        if self.temporary_buffer_add.buffer.is_empty() {
             // If the buffer is empty, we can skip persisting
             return;
         }
 
         // If the buffer is not empty, we need to persist its content to the piece table
-        if force_save || self.temporary_buffer.buffer.len() > self.temporary_buffer.max_length / 2 {
+        if force_save || self.temporary_buffer_add.buffer.len() > self.temporary_buffer_add.max_length / 2 {
             let _ = self
                 .content
-                .add_text(&self.temporary_buffer.buffer.clone(), self.temporary_buffer.position);
+                .add_text(&self.temporary_buffer_add.buffer.clone(), self.temporary_buffer_add.position);
 
-            self.temporary_buffer.clear(self.cursor_position);
+            self.temporary_buffer_add.clear(self.cursor_position);
         }
     }
 }

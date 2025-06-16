@@ -1,11 +1,13 @@
+use crate::prelude::EnumAddResult;
+
 /// A buffer for temporarily holding text before persisting to the piece table.
-pub struct TemporaryBuffer {
+pub struct TemporaryBufferAddText {
     pub buffer: String,
     pub max_length: usize,
     pub position: usize,
 }
 
-impl TemporaryBuffer {
+impl TemporaryBufferAddText {
     pub fn new(max_length: usize, cursor_position: usize) -> Self {
         Self {
             buffer: String::new(),
@@ -14,7 +16,7 @@ impl TemporaryBuffer {
         }
     }
 
-    pub fn add_char(&mut self, c: char) -> Result<AddResult, ()> {
+    pub fn add_char(&mut self, c: char) -> Result<EnumAddResult, ()> {
         if self.buffer.len() >= self.max_length {
             return Err(());
         }
@@ -22,9 +24,9 @@ impl TemporaryBuffer {
         self.buffer.push(c);
         
         if self.buffer.len() == self.max_length {
-            Ok(AddResult::MustPersist)
+            Ok(EnumAddResult::MustPersist)
         } else {
-            Ok(AddResult::Added)
+            Ok(EnumAddResult::Added)
         }
     }
     
@@ -32,10 +34,9 @@ impl TemporaryBuffer {
         self.position = new_position;
     }
 
-    pub fn remove_char(&mut self) {
+    pub fn delete_char(&mut self) {
         if self.position > 0 {
             self.buffer.pop();
-            self.position -= 1;
         }
     }
 
@@ -43,10 +44,9 @@ impl TemporaryBuffer {
         self.buffer.clear();
         self.position = cursor_position;
     }
-}
-
-/// Result of attempting to add a character to the TemporaryBuffer.
-pub enum AddResult {
-    Added,
-    MustPersist,
+    
+    pub fn is_cursor_on_buffer(&self, cursor_position: usize) -> bool {
+        let end = self.position + self.buffer.len();
+        cursor_position >= self.position && cursor_position < end
+    }
 }
