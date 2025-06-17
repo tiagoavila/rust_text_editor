@@ -18,16 +18,12 @@ impl TemporaryBufferDeleteText {
     pub fn add_char(&mut self, position: usize) -> Result<EnumAddResult, ()> {
         if self.start.is_none() {
             self.start = Some(position);
-            self.end = Some(position);
+            self.end = Some(position + 1);
             return Ok(EnumAddResult::Added);
         }
         
         let start = self.start.unwrap();
         let end = self.end.unwrap();
-
-        if start > position || end < position {
-            return Err(());
-        }
 
         if position < start {
             self.start = Some(position);
@@ -48,6 +44,10 @@ impl TemporaryBufferDeleteText {
         } else {
             None
         }
+    }
+    
+    pub fn is_empty(&self) -> bool {
+        self.start.is_none() && self.end.is_none()
     }
 
     pub fn clear(&mut self) {

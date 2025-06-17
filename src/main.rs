@@ -49,7 +49,7 @@ fn main() -> io::Result<()> {
                         code: KeyCode::Backspace,
                         ..
                     } => {
-                        content.delete_char();
+                        content.delete_char(event.code);
                         OutputManager::refresh_screen(&content)?;
                     }
                     KeyEvent {
