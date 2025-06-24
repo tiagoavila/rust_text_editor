@@ -63,6 +63,7 @@ impl Editor {
     pub fn delete_char(&mut self, operator: KeyCode) {
         if self.cursor_position > 0 {
             self.cursor_position -= 1;
+            self.temporary_add_buffer.position = self.cursor_position;
             let mut deleted_position = self.cursor_position;
             if operator == KeyCode::Delete {
                 deleted_position += 1; // Adjust for delete operation
