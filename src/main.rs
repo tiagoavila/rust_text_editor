@@ -33,7 +33,9 @@ fn main() -> io::Result<()> {
     terminal::enable_raw_mode()?;
     OutputManager::clear_screen()?;
 
-    let mut content = Editor::new(String::from("0123456789"), 5);
+    // let mut content = Editor::new(String::from("0123456789"), 5);
+    let mut content = Editor::new(String::from("Hello World"), 5);
+
     OutputManager::refresh_screen(&content)?;
 
     loop {
@@ -41,16 +43,29 @@ fn main() -> io::Result<()> {
             if let Event::Key(event) = read().expect("Failed to read line") {
                 match event {
                     KeyEvent {
-                        code: code @ (KeyCode::Char('q') | KeyCode::Esc),
+                        code: key @ (KeyCode::Char('q') | KeyCode::Esc),
                         modifiers,
                         ..
-                    } if code == KeyCode::Esc || (code == KeyCode::Char('q') && modifiers == KeyModifiers::CONTROL) => break,
+                    } if key == KeyCode::Esc || (key == KeyCode::Char('q') && modifiers == KeyModifiers::CONTROL) => break,
                     KeyEvent {
-                        code: code @ (KeyCode::Backspace | KeyCode::Delete),
+                        code: key @ (KeyCode::Backspace | KeyCode::Delete | KeyCode::Char('h')),
+                        modifiers,
                         ..
                     } => {
-                        content.delete_char(code);
-                        OutputManager::refresh_screen(&content)?;
+                        println!("Key pressed: {:?}", event);
+                        if modifiers == KeyModifiers::CONTROL {
+                            // For whatever reason when using Ctrl + Backspace the key code come as `Char('h')`
+                            if key == KeyCode::Char('h') {
+                                content.delete_char(KeyCode::Backspace);
+                            } else {
+                                content.delete_char(KeyCode::Delete);
+                            } 
+                        } else {
+                            // Handle backspace and delete
+                            content.delete_char(key);
+                        }
+
+                        // OutputManager::refresh_screen(&content)?;
                     }
                     KeyEvent {
                         code: KeyCode::Enter,

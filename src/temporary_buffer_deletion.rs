@@ -58,6 +58,77 @@ impl TemporaryBufferDeleteText {
         }
     }
 
+    pub fn delete_word(&mut self, text: &str, position: usize, key: KeyCode) -> Result<EnumAddResult, ()> {
+        if key != KeyCode::Backspace && key != KeyCode::Delete {
+            return Err(());
+        }
+        
+        if key == KeyCode::Backspace {
+            if position == 0 {
+                return Ok(EnumAddResult::NoChange);
+            }
+            
+            if self.start.is_none() {
+                // Find first space before the position
+                let mut start = position;
+                for (i, ch) in text[..position].char_indices().rev() {
+                    if ch.is_whitespace() {
+                        start = i;
+                        break;
+                    }
+
+                    if i == 0 {
+                        start = 0;
+                        break;
+                    }
+                }
+
+                self.start = Some(start);
+                self.end = Some(position);
+
+                return Ok(EnumAddResult::Added);
+            } else {
+                // Extend the deletion range backwards
+                // if let Some(start) = self.start {
+                //     self.start = Some(start.saturating_sub(1));
+                // }
+            }
+        } else {
+            if position >= text.len() {
+                return Ok(EnumAddResult::NoChange);
+            }
+
+            if self.end.is_none() {
+                // Find first space after the position
+                let mut end = position;
+
+                for (i, ch) in text[..position].char_indices() {
+                    if ch.is_whitespace() {
+                        end = i + 1; // Move to the next character after the space because end is exclusive
+                        break;
+                    }
+
+                    if i == text.len() - 1 {
+                        end = i + 1;
+                        break;
+                    }
+                }
+
+                self.start = Some(position);
+                self.end = Some(end);
+
+                return Ok(EnumAddResult::Added);
+            } else {
+                // For Delete key, extend the end of the deletion range
+                // if let Some(end) = self.end {
+                //     self.end = Some(end + 1);
+                // }
+            }       
+        }
+        
+        Ok(EnumAddResult::Added)
+    }
+
     pub fn get_deletion_range(&self) -> Option<(usize, usize)> {
         if let (Some(start), Some(end)) = (self.start, self.end) {
             Some((start, end))

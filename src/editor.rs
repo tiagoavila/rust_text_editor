@@ -38,10 +38,11 @@ impl Editor {
 
         // Persist the buffer if AddResult::MustPersist is returned
         if let Ok(EnumAddResult::MustPersist) = add_result {
-            self.persist_temporary_add_buffer(true);
+            self.persist_add_buffer(true);
         }
     }
     
+    /// Returns the current text in the editor, including any temporary buffers.
     pub fn get_text(&self) -> String {
         let mut content = self.content.get_text();
 
@@ -64,7 +65,7 @@ impl Editor {
         if self.cursor_position > 0 {
             let deleted_position = self.cursor_position;
 
-            // If the cursor is on the temporary buffer add, remove a character from it
+            // If the cursor is on the temporary buffer add, remove the character from it at the end
             if !self.temporary_add_buffer.buffer.is_empty() && self.temporary_add_buffer.is_cursor_on_buffer(self.cursor_position) {
                 self.temporary_add_buffer.delete_char();
             } else {
@@ -81,6 +82,16 @@ impl Editor {
             self.temporary_add_buffer.update_position(self.cursor_position);
         }
     }
+    
+    pub fn delete_word(&mut self, key: KeyCode) {
+        if !self.temporary_add_buffer.buffer.is_empty() {
+            self.persist_add_buffer(true);
+        }
+
+        if let Ok(EnumAddResult::MustPersist) = self.temporary_delete_buffer.delete_word(&self.get_text(), self.cursor_position, key) {
+            self.persist_delete_buffer();
+        }
+    }
 
     fn persist_delete_buffer(&mut self) {
         if let Some((start, end)) = self.temporary_delete_buffer.get_deletion_range() {
@@ -92,7 +103,7 @@ impl Editor {
     pub fn move_cursor_left(&mut self) {
         if self.cursor_position > 0 {
             self.cursor_position -= 1;
-            self.persist_temporary_add_buffer(true);
+            self.persist_add_buffer(true);
             self.persist_delete_buffer();
             self.temporary_add_buffer.update_position(self.cursor_position);
         }
@@ -101,7 +112,7 @@ impl Editor {
     pub fn move_cursor_right(&mut self) {
         if self.cursor_position < self.content.total_length() {
             self.cursor_position += 1;
-            self.persist_temporary_add_buffer(true);
+            self.persist_add_buffer(true);
             self.temporary_add_buffer.update_position(self.cursor_position);
         }
     }
@@ -137,7 +148,7 @@ impl Editor {
     ///
     /// After persisting, the buffer is cleared and the buffer position is updated to the
     /// current cursor position.
-    pub fn persist_temporary_add_buffer(&mut self, force_save: bool) {
+    pub fn persist_add_buffer(&mut self, force_save: bool) {
         if self.temporary_add_buffer.buffer.is_empty() {
             // If the buffer is empty, we can skip persisting
             return;
