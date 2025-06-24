@@ -33,7 +33,7 @@ fn main() -> io::Result<()> {
     terminal::enable_raw_mode()?;
     OutputManager::clear_screen()?;
 
-    let mut content = Editor::new(String::from("Hello World"), 5);
+    let mut content = Editor::new(String::from("0123456789"), 5);
     OutputManager::refresh_screen(&content)?;
 
     loop {
@@ -46,10 +46,10 @@ fn main() -> io::Result<()> {
                         ..
                     } if code == KeyCode::Esc || (code == KeyCode::Char('q') && modifiers == KeyModifiers::CONTROL) => break,
                     KeyEvent {
-                        code: KeyCode::Backspace,
+                        code: code @ (KeyCode::Backspace | KeyCode::Delete),
                         ..
                     } => {
-                        content.delete_char(event.code);
+                        content.delete_char(code);
                         OutputManager::refresh_screen(&content)?;
                     }
                     KeyEvent {

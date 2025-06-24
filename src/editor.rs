@@ -60,24 +60,25 @@ impl Editor {
         content
     }
 
-    pub fn delete_char(&mut self, operator: KeyCode) {
+    pub fn delete_char(&mut self, key: KeyCode) {
         if self.cursor_position > 0 {
-            self.cursor_position -= 1;
-            self.temporary_add_buffer.position = self.cursor_position;
-            let mut deleted_position = self.cursor_position;
-            if operator == KeyCode::Delete {
-                deleted_position += 1; // Adjust for delete operation
-            }
+            let deleted_position = self.cursor_position;
 
             // If the cursor is on the temporary buffer add, remove a character from it
             if !self.temporary_add_buffer.buffer.is_empty() && self.temporary_add_buffer.is_cursor_on_buffer(self.cursor_position) {
                 self.temporary_add_buffer.delete_char();
             } else {
-                if let Ok(EnumAddResult::MustPersist) = self.temporary_delete_buffer.add_char(deleted_position) {
+                if let Ok(EnumAddResult::MustPersist) = self.temporary_delete_buffer.add_char(deleted_position, key) {
                     // If the delete buffer is full, then delete the text range from the piece table
                     self.persist_delete_buffer();
                 }
             }
+
+            if key == KeyCode::Backspace {
+                self.cursor_position -= 1; // Move cursor back before deleting with backspace
+            }
+
+            self.temporary_add_buffer.update_position(self.cursor_position);
         }
     }
 
@@ -92,6 +93,7 @@ impl Editor {
         if self.cursor_position > 0 {
             self.cursor_position -= 1;
             self.persist_temporary_add_buffer(true);
+            self.persist_delete_buffer();
             self.temporary_add_buffer.update_position(self.cursor_position);
         }
     }

@@ -2,4 +2,5 @@
 pub enum EnumAddResult {
     Added,
     MustPersist,
+    NoChange,
 }

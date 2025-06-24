@@ -363,7 +363,7 @@ fn test_delete_single_piece() {
     let mut piece_table = PieceTable::new("ABCXXXXDEF");
 
     // Delete the X's (positions 3 to 6, length 4)
-    let result = piece_table.delete_text(3, 6);
+    let result = piece_table.delete_text(3, 6 + 1); // end index + 1 for exclusive
 
     assert!(result.is_ok());
 
@@ -378,9 +378,10 @@ fn test_delete_single_piece() {
     assert_eq!(text, "ABCDEFXXXXGHI");
 
     // Delete the X's (positions 6 to 9, length 4)
-    let result = piece_table.delete_text(6, 9);
+    let result = piece_table.delete_text(6, 9 + 1); // end index + 1 for exclusive
 
     assert!(result.is_ok());
+
 
     // The expected logical text is: "ABCDEF"
     let text = piece_table.get_text();
@@ -393,7 +394,7 @@ fn test_delete_text_to_the_end_of_a_piece() {
     // let mut piece_table = PieceTable::new("ABCDEFXXXX");
 
     // // Delete the X's (positions 6 to 9, length 4)
-    // let result = piece_table.delete_text(6, 9);
+    // let result = piece_table.delete_text(6, 9 + 1); // end index + 1 for exclusive
 
     // assert!(result.is_ok());
 
@@ -408,7 +409,7 @@ fn test_delete_text_to_the_end_of_a_piece() {
     assert_eq!(text, "ABCDEFGHIXXXX");
 
     // Delete the X's (positions 9 to 12, length 4)
-    let result = piece_table.delete_text(9, 12);
+    let result = piece_table.delete_text(9, 12 + 1); // end index + 1 for exclusive
 
     assert!(result.is_ok());
 
@@ -423,7 +424,7 @@ fn test_delete_text_at_start_of_a_piece() {
     let mut piece_table = PieceTable::new("XXXXABCDEF");
 
     // Delete the X's (positions 0 to 3, length 4)
-    let result = piece_table.delete_text(0, 3);
+    let result = piece_table.delete_text(0, 3 + 1); // end index + 1 for exclusive
 
     assert!(result.is_ok());
 
@@ -438,7 +439,7 @@ fn test_delete_text_at_start_of_a_piece() {
     assert_eq!(text, "ABCXXXXDEFGHI");
 
     // Delete the X's (positions 0 to 3, length 4)
-    let result = piece_table.delete_text(3, 6);
+    let result = piece_table.delete_text(3, 6 + 1); // end index + 1 for exclusive
 
     assert!(result.is_ok());
 
@@ -461,7 +462,7 @@ fn test_delete_across_multiple_pieces() {
 
     // Delete from position 3 (the '2' in "123") to position 10 (the 'Y' in "XYZ")
     // This should delete: "23CDEFXY"
-    let result = piece_table.delete_text(3, 10);
+    let result = piece_table.delete_text(3, 10 + 1); // end index + 1 for exclusive
     assert!(result.is_ok());
 
     // The expected logical text is: "AB1ZGHIJ"

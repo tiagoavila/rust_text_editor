@@ -305,8 +305,8 @@ impl TextTrait for PieceTable {
             if end_offset < end_piece.length {
                 new_pieces.push(Piece {
                     buffer_type: end_piece.buffer_type.clone(),
-                    start: end_piece.start + end_offset + 1, // Skip the deleted part
-                    length: end_piece.length - end_offset - 1, // Remaining length
+                    start: end_piece.start + end_offset, // Skip the deleted part
+                    length: end_piece.length - end_offset, // Remaining length
                 });
             }
         }
