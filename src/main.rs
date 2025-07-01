@@ -35,18 +35,18 @@ fn main() -> io::Result<()> {
 
     // let mut content = Editor::new(String::from("0123456789"), 5);
     let mut content = Editor::new(String::from("Hello World"), 5);
-
     OutputManager::refresh_screen(&content)?;
 
     loop {
         if poll(Duration::from_millis(1000))? {
             if let Event::Key(event) = read().expect("Failed to read line") {
+                let mut stop_loop = false;
                 match event {
                     KeyEvent {
                         code: key @ (KeyCode::Char('q') | KeyCode::Esc),
                         modifiers,
                         ..
-                    } if key == KeyCode::Esc || (key == KeyCode::Char('q') && modifiers == KeyModifiers::CONTROL) => break,
+                    } if key == KeyCode::Esc || (key == KeyCode::Char('q') && modifiers == KeyModifiers::CONTROL) => stop_loop = true,
                     KeyEvent {
                         code: key @ (KeyCode::Backspace | KeyCode::Delete),
                         modifiers,
@@ -57,8 +57,6 @@ fn main() -> io::Result<()> {
                         } else {
                             content.delete_char(key);
                         }
-
-                        OutputManager::refresh_screen(&content)?;
                     }
                     KeyEvent {
                         code: key @ (KeyCode::Char('h') | KeyCode::Char('w')),
@@ -70,15 +68,12 @@ fn main() -> io::Result<()> {
                         } else {
                             content.add_char(key.as_char().unwrap_or(' '));
                         }
-                        
-                        OutputManager::refresh_screen(&content)?;
                     }
                     KeyEvent {
                         code: KeyCode::Enter,
                         ..
                     } => {
                         content.add_new_line();
-                        OutputManager::refresh_screen(&content)?;
                     }
                     KeyEvent {
                         code: direction @ (KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down),
@@ -91,14 +86,18 @@ fn main() -> io::Result<()> {
                             // KeyCode::Down => content.move_cursor_down(),
                             _ => unreachable!(),
                         }
-                        OutputManager::refresh_screen(&content)?;
                     }
                     _ => {
                         if let KeyCode::Char(c) = event.code {
                             content.add_char(c);
                         }
-                        OutputManager::refresh_screen(&content)?;
                     }
+                }
+                
+                if !stop_loop {
+                    OutputManager::refresh_screen(&content)?;
+                } else {
+                    break;
                 }
             };
         } else {
