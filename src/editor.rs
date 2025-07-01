@@ -78,8 +78,6 @@ impl Editor {
             if key == KeyCode::Backspace {
                 self.cursor_position -= 1; // Move cursor back before deleting with backspace
             }
-
-            self.temporary_add_buffer.update_position(self.cursor_position);
         }
     }
     
@@ -87,8 +85,17 @@ impl Editor {
         if !self.temporary_add_buffer.buffer.is_empty() {
             self.persist_add_buffer(true);
         }
+        
+        let delete_result = self.temporary_delete_buffer.delete_word(&self.get_text(), self.cursor_position, key);
 
-        if let Ok(EnumAddResult::MustPersist) = self.temporary_delete_buffer.delete_word(&self.get_text(), self.cursor_position, key) {
+        if key == KeyCode::Backspace {
+            if let Some((start, _end)) = self.temporary_delete_buffer.get_deletion_range() {
+                self.cursor_position = start; // Update cursor position to the start of the deletion range
+                self.temporary_add_buffer.update_position(self.cursor_position);
+            }
+        }
+
+        if let Ok(EnumAddResult::MustPersist) = delete_result {
             self.persist_delete_buffer();
         }
     }

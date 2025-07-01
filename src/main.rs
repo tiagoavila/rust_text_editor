@@ -48,24 +48,30 @@ fn main() -> io::Result<()> {
                         ..
                     } if key == KeyCode::Esc || (key == KeyCode::Char('q') && modifiers == KeyModifiers::CONTROL) => break,
                     KeyEvent {
-                        code: key @ (KeyCode::Backspace | KeyCode::Delete | KeyCode::Char('h')),
+                        code: key @ (KeyCode::Backspace | KeyCode::Delete),
                         modifiers,
                         ..
                     } => {
-                        println!("Key pressed: {:?}", event);
-                        if modifiers == KeyModifiers::CONTROL {
-                            // For whatever reason when using Ctrl + Backspace the key code come as `Char('h')`
-                            if key == KeyCode::Char('h') {
-                                content.delete_char(KeyCode::Backspace);
-                            } else {
-                                content.delete_char(KeyCode::Delete);
-                            } 
+                        if key == KeyCode::Delete && modifiers == KeyModifiers::CONTROL {
+                            content.delete_word(KeyCode::Delete);
                         } else {
-                            // Handle backspace and delete
                             content.delete_char(key);
                         }
 
-                        // OutputManager::refresh_screen(&content)?;
+                        OutputManager::refresh_screen(&content)?;
+                    }
+                    KeyEvent {
+                        code: key @ (KeyCode::Char('h') | KeyCode::Char('w')),
+                        modifiers,
+                        ..
+                    } => {
+                        if modifiers == KeyModifiers::CONTROL {
+                            content.delete_word(KeyCode::Backspace);
+                        } else {
+                            content.add_char(key.as_char().unwrap_or(' '));
+                        }
+                        
+                        OutputManager::refresh_screen(&content)?;
                     }
                     KeyEvent {
                         code: KeyCode::Enter,

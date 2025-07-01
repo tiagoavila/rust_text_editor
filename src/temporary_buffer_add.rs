@@ -47,6 +47,6 @@ impl TemporaryBufferAddText {
     
     pub fn is_cursor_on_buffer(&self, cursor_position: usize) -> bool {
         let end = self.position + self.buffer.len();
-        cursor_position >= self.position && cursor_position < end
+        cursor_position >= self.position && cursor_position <= end
     }
 }
