@@ -14,6 +14,7 @@ mod editor;
 mod temporary_buffer_add;
 mod temporary_buffer_deletion;
 mod enum_add_result;
+mod position;
 
 mod prelude {
     pub use crate::cleanup::*;
@@ -24,6 +25,7 @@ mod prelude {
     pub use crate::temporary_buffer_add::*;
     pub use crate::temporary_buffer_deletion::*;
     pub use crate::enum_add_result::*;
+    pub use crate::position::*;
 }
 
 use prelude::*;
@@ -32,9 +34,11 @@ fn main() -> io::Result<()> {
     let _clean_up = CleanUp;
     terminal::enable_raw_mode()?;
     OutputManager::clear_screen()?;
+    // let initial_text = "Hello World";
+    let initial_text = "Rita Marta";
 
     // let mut content = Editor::new(String::from("0123456789"), 5);
-    let mut content = Editor::new(String::from("Hello World"), 5);
+    let mut content = Editor::new(String::from(initial_text), 5);
     OutputManager::refresh_screen(&content)?;
 
     loop {

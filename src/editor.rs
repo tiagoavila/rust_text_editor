@@ -1,10 +1,10 @@
 use crossterm::event::KeyCode;
 
-use crate::{content::Position, prelude::{EnumAddResult, PieceTable, TemporaryBufferAddText, TemporaryBufferDeleteText, TextTrait}};
+use crate::prelude::{EnumAddResult, PieceTable, Position, TemporaryBufferAddText, TemporaryBufferDeleteText, TextTrait};
 
 pub struct Editor {
     content: PieceTable,
-    pub cursor_position_x: usize,
+    pub text_position: usize,
     pub temporary_add_buffer: TemporaryBufferAddText,
     pub temporary_delete_buffer: TemporaryBufferDeleteText,
     pub cursor: Position
@@ -15,14 +15,14 @@ impl Editor {
         let mut cursor_position = 0; // Start at the end of the text
         if !text.is_empty() {
             // If the text is not empty, set the cursor position to the end of the text
-            cursor_position = text.len();
+            cursor_position = text.len() - 1;
         }
 
         Self {
             content: PieceTable::new(&text.clone()),
             temporary_add_buffer: TemporaryBufferAddText::new(temporary_buffer_max_length, cursor_position),
             temporary_delete_buffer: TemporaryBufferDeleteText::new(temporary_buffer_max_length),
-            cursor_position_x: cursor_position,
+            text_position: cursor_position,
             cursor: Position { x: cursor_position as u16, y: 0 }
         }
     }
@@ -36,12 +36,13 @@ impl Editor {
         
         if self.temporary_add_buffer.buffer.is_empty() {
             // If the temporary buffer is empty, we can set its position to the current cursor position
-            self.temporary_add_buffer.update_position(self.cursor_position_x);
+            self.temporary_add_buffer.update_position(self.text_position);
         }
 
         let add_result = self.temporary_add_buffer.add_char(c);
 
-        self.cursor_position_x += 1;
+        self.text_position += 1;
+        self.cursor.move_right();
 
         // Persist the buffer if AddResult::MustPersist is returned
         if let Ok(EnumAddResult::MustPersist) = add_result {
@@ -88,11 +89,11 @@ impl Editor {
     }
 
     pub fn delete_char(&mut self, key: KeyCode) {
-        if self.cursor_position_x > 0 {
-            let deleted_position = self.cursor_position_x;
+        if self.text_position > 0 {
+            let deleted_position = self.text_position;
 
             // If the cursor is on the temporary buffer add, remove the character from it at the end
-            if !self.temporary_add_buffer.buffer.is_empty() && self.temporary_add_buffer.is_cursor_on_buffer(self.cursor_position_x) {
+            if !self.temporary_add_buffer.buffer.is_empty() && self.temporary_add_buffer.is_cursor_on_buffer(self.text_position) {
                 self.temporary_add_buffer.delete_char();
             } else {
                 if let Ok(EnumAddResult::MustPersist) = self.temporary_delete_buffer.add_char(deleted_position, key) {
@@ -102,7 +103,8 @@ impl Editor {
             }
 
             if key == KeyCode::Backspace {
-                self.cursor_position_x -= 1; // Move cursor back before deleting with backspace
+                self.text_position -= 1; // Move cursor back before deleting with backspace
+                self.cursor.move_left();
             }
         }
     }
@@ -112,12 +114,12 @@ impl Editor {
             self.persist_add_buffer(true);
         }
         
-        let delete_result = self.temporary_delete_buffer.delete_word(&self.get_text(), self.cursor_position_x, key);
+        let delete_result = self.temporary_delete_buffer.delete_word(&self.get_text(), self.text_position, key);
 
         if key == KeyCode::Backspace {
             if let Some((start, _end)) = self.temporary_delete_buffer.get_deletion_range() {
-                self.cursor_position_x = start; // Update cursor position to the start of the deletion range
-                self.temporary_add_buffer.update_position(self.cursor_position_x);
+                self.text_position = start; // Update cursor position to the start of the deletion range
+                self.temporary_add_buffer.update_position(self.text_position);
             }
         }
 
@@ -127,18 +129,18 @@ impl Editor {
     }
 
     pub fn move_cursor_left(&mut self) {
-        if self.cursor_position_x > 0 {
-            self.cursor_position_x -= 1;
-            self.persist_changes();
-            self.temporary_add_buffer.update_position(self.cursor_position_x);
+        if self.text_position > 0 {
+            self.text_position -= 1;
+            self.cursor.move_left();
+            self.do_after_move_cursor(); 
         }
     }
 
     pub fn move_cursor_right(&mut self) {
-        if self.cursor_position_x < self.content.total_length() {
-            self.cursor_position_x += 1;
-            self.persist_changes();
-            self.temporary_add_buffer.update_position(self.cursor_position_x);
+        if self.text_position < self.content.total_length() {
+            self.text_position += 1;
+            self.cursor.move_right();
+            self.do_after_move_cursor();
         }
     }
 
@@ -157,9 +159,11 @@ impl Editor {
     pub fn add_new_line(&mut self) {
         self.persist_changes();
 
-        let _ = self.content.add_text(&format!("\n"), self.cursor_position_x);
+        let _ = self.content.add_text(&format!("\n"), self.text_position);
         self.cursor.x = 0;
         self.cursor.y += 1;
+        self.text_position += 1;
+        self.temporary_add_buffer.update_position(self.text_position);
     }
 
     /// Persists the contents of the temporary buffer to the piece table.
@@ -187,7 +191,7 @@ impl Editor {
                 .content
                 .add_text(&self.temporary_add_buffer.buffer.clone(), self.temporary_add_buffer.position);
 
-            self.temporary_add_buffer.clear(self.cursor_position_x);
+            self.temporary_add_buffer.clear(self.text_position);
         }
     }
     
@@ -202,6 +206,13 @@ impl Editor {
     fn persist_changes(&mut self) {
         self.persist_add_buffer(true);
         self.persist_delete_buffer();
+    }
+    
+    fn do_after_move_cursor(&mut self) {
+        // This function can be used to perform any additional actions after moving the cursor
+        // For example, updating the temporary buffer position or refreshing the screen
+        self.persist_changes();
+        self.temporary_add_buffer.update_position(self.text_position);
     }
     
 }

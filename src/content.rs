@@ -53,13 +53,3 @@ impl Content {
     }
 }
 
-pub struct Position {
-    pub x: u16,
-    pub y: u16,
-}
-
-impl Position {
-    pub fn new() -> Self {
-        Self { x: 0, y: 0 }
-    }
-}
