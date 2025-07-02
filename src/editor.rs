@@ -1,12 +1,13 @@
 use crossterm::event::KeyCode;
 
-use crate::prelude::{EnumAddResult, PieceTable, TemporaryBufferAddText, TemporaryBufferDeleteText, TextTrait};
+use crate::{content::Position, prelude::{EnumAddResult, PieceTable, TemporaryBufferAddText, TemporaryBufferDeleteText, TextTrait}};
 
 pub struct Editor {
     content: PieceTable,
     pub cursor_position: usize,
     pub temporary_add_buffer: TemporaryBufferAddText,
     pub temporary_delete_buffer: TemporaryBufferDeleteText,
+    pub cursor: Position
 }
 
 impl Editor {
@@ -22,6 +23,7 @@ impl Editor {
             temporary_add_buffer: TemporaryBufferAddText::new(temporary_buffer_max_length, cursor_position),
             temporary_delete_buffer: TemporaryBufferDeleteText::new(temporary_buffer_max_length),
             cursor_position,
+            cursor: Position { x: cursor_position as u16, y: 0 }
         }
     }
 
@@ -30,6 +32,11 @@ impl Editor {
         
         if !self.temporary_delete_buffer.is_empty() {
             self.persist_delete_buffer();
+        }
+        
+        if self.temporary_add_buffer.buffer.is_empty() {
+            // If the temporary buffer is empty, we can set its position to the current cursor position
+            self.temporary_add_buffer.update_position(self.cursor_position);
         }
 
         let add_result = self.temporary_add_buffer.add_char(c);
@@ -59,6 +66,25 @@ impl Editor {
         }
 
         content
+    }
+
+    /// Returns the current text in the editor as a vector of lines.
+    pub fn get_text_lines(&self) -> Vec<String> {
+        let mut content = self.content.get_text();
+
+        // Insert the temporary buffer at its position if it's not empty
+        if !self.temporary_add_buffer.buffer.is_empty() {
+            let pos = self.temporary_add_buffer.position;
+            content.insert_str(pos, &self.temporary_add_buffer.buffer);
+        }
+        else if !self.temporary_delete_buffer.is_empty() {
+            // If the delete buffer is not empty, we should not show the deleted text
+            if let Some((start, end)) = self.temporary_delete_buffer.get_deletion_range() {
+                content.replace_range(start..end, "");
+            }
+        }
+
+        content.split("\n").map(|line| line.to_string()).collect::<Vec<String>>()
     }
 
     pub fn delete_char(&mut self, key: KeyCode) {
@@ -100,18 +126,10 @@ impl Editor {
         }
     }
 
-    fn persist_delete_buffer(&mut self) {
-        if let Some((start, end)) = self.temporary_delete_buffer.get_deletion_range() {
-            let _ = self.content.delete_text(start, end);
-            self.temporary_delete_buffer.clear();
-        }
-    }
-    
     pub fn move_cursor_left(&mut self) {
         if self.cursor_position > 0 {
             self.cursor_position -= 1;
-            self.persist_add_buffer(true);
-            self.persist_delete_buffer();
+            self.persist_changes();
             self.temporary_add_buffer.update_position(self.cursor_position);
         }
     }
@@ -119,7 +137,7 @@ impl Editor {
     pub fn move_cursor_right(&mut self) {
         if self.cursor_position < self.content.total_length() {
             self.cursor_position += 1;
-            self.persist_add_buffer(true);
+            self.persist_changes();
             self.temporary_add_buffer.update_position(self.cursor_position);
         }
     }
@@ -137,9 +155,11 @@ impl Editor {
     }
 
     pub fn add_new_line(&mut self) {
-        // self.content.push('\n');
-        // self.cursor_position.x = 0;
-        // self.cursor_position.y += 1;
+        self.persist_changes();
+
+        let _ = self.content.add_text(&format!("\n"), self.cursor_position);
+        self.cursor.x = 0;
+        self.cursor.y += 1;
     }
 
     /// Persists the contents of the temporary buffer to the piece table.
@@ -170,4 +190,18 @@ impl Editor {
             self.temporary_add_buffer.clear(self.cursor_position);
         }
     }
+    
+    /// Persists the contents of the temporary delete buffer to the piece table.
+    fn persist_delete_buffer(&mut self) {
+        if let Some((start, end)) = self.temporary_delete_buffer.get_deletion_range() {
+            let _ = self.content.delete_text(start, end);
+            self.temporary_delete_buffer.clear();
+        }
+    }
+    
+    fn persist_changes(&mut self) {
+        self.persist_add_buffer(true);
+        self.persist_delete_buffer();
+    }
+    
 }
