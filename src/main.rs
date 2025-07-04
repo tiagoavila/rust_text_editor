@@ -34,8 +34,8 @@ fn main() -> io::Result<()> {
     let _clean_up = CleanUp;
     terminal::enable_raw_mode()?;
     OutputManager::clear_screen()?;
-    // let initial_text = "Hello World";
-    let initial_text = "Rita Marta";
+    let initial_text = "Hello World";
+    // let initial_text = "Rita Marta";
 
     // let mut content = Editor::new(String::from("0123456789"), 5);
     let mut content = Editor::new(String::from(initial_text), 5);
