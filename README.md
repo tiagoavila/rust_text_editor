@@ -102,7 +102,3 @@ This project demonstrates advanced text editor concepts including:
 - Terminal UI programming
 - Buffer management and optimization
 - Rust's memory safety and performance characteristics
-
-## License
-
-This project is open source and available under the MIT License. 
