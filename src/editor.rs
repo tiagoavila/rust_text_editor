@@ -13,6 +13,8 @@ pub struct Editor {
 }
 
 impl Editor {
+    /// Creates a new Editor instance with the given initial text and temporary buffer size.
+    /// Initializes the piece table, buffers, cursor position, and line map.
     pub fn new(text: String, temporary_buffer_max_length: usize) -> Self {
         let mut cursor_position = 0; // Start at the end of the text
         if !text.is_empty() {
@@ -34,6 +36,8 @@ impl Editor {
         editor
     }
 
+    /// Adds a character at the current cursor position using the temporary add buffer.
+    /// Persists the delete buffer if needed, updates buffer position, and moves the cursor.
     pub fn add_char(&mut self, c: char) {
         use crate::prelude::EnumAddResult;
         
@@ -82,6 +86,8 @@ impl Editor {
         self.get_text().split("\n").map(|line| line.to_string()).collect::<Vec<String>>()
     }
 
+    /// Deletes a character at the current cursor position.
+    /// Handles both the temporary add buffer and the delete buffer, and updates the cursor.
     pub fn delete_char(&mut self, key: KeyCode) {
         if self.text_position > 0 {
             let deleted_position = self.text_position;
@@ -104,6 +110,8 @@ impl Editor {
         }
     }
     
+    /// Deletes a word at the current cursor position.
+    /// Persists the add buffer if needed and updates the cursor and buffers accordingly.
     pub fn delete_word(&mut self, key: KeyCode) {
         if !self.temporary_add_buffer.buffer.is_empty() {
             self.persist_add_buffer(true);
@@ -123,6 +131,7 @@ impl Editor {
         }
     }
 
+    /// Moves the cursor one position to the left, updating the text position and line map.
     pub fn move_cursor_left(&mut self) {
         if self.text_position > 0 {
             self.text_position -= 1;
@@ -132,6 +141,7 @@ impl Editor {
         }
     }
 
+    /// Moves the cursor one position to the right, updating the text position and line map.
     pub fn move_cursor_right(&mut self) {
         if self.text_position < self.content.total_length() {
             self.text_position += 1;
@@ -141,6 +151,8 @@ impl Editor {
         }
     }
 
+    /// Moves the cursor up by one line, adjusting the x position if necessary.
+    /// Updates the text position and line map.
     pub fn move_cursor_up(&mut self) {
         self.cursor.move_up();
         self.handle_change_of_cursor_y_position();
@@ -148,6 +160,8 @@ impl Editor {
         // TODO: Implement logic to move the cursor up in the content by updating the text_position value
     }
 
+    /// Moves the cursor down by one line, adjusting the x position if necessary.
+    /// Updates the text position and line map.
     pub fn move_cursor_down(&mut self) {
         self.cursor.move_down();
         self.handle_change_of_cursor_y_position();
@@ -155,10 +169,8 @@ impl Editor {
         // TODO: Implement logic to move the cursor down in the content by updating the text_position value
     }
     
-    /// If the cursor's y position changes, we need to ensure that the x position is valid for the new line.
-    /// If the x position is greater than the length of the new line, we set it to the last character of the line.
-    /// If the x position is valid, we set it to the right most column.
-    /// This function is called after moving the cursor up or down.
+    /// Ensures the cursor's x position is valid for the current line after moving up or down.
+    /// Adjusts x to the last character if it exceeds the line length.
     fn handle_change_of_cursor_y_position(&mut self) {
         let line_index = self.cursor.y as usize;
         let line_length = self.lines_map.get(&line_index).cloned().unwrap_or(0);
@@ -170,6 +182,8 @@ impl Editor {
         }
     }
 
+    /// Adds a new line at the current cursor position.
+    /// Persists any changes, inserts a newline, updates buffers, and resets the rightmost column.
     pub fn add_new_line(&mut self) {
         self.persist_changes();
 
@@ -211,6 +225,7 @@ impl Editor {
     }
     
     /// Persists the contents of the temporary delete buffer to the piece table.
+    /// Deletes the text range from the piece table and clears the delete buffer.
     fn persist_delete_buffer(&mut self) {
         if let Some((start, end)) = self.temporary_delete_buffer.get_deletion_range() {
             let _ = self.content.delete_text(start, end);
@@ -218,13 +233,15 @@ impl Editor {
         }
     }
     
+    /// Persists both the add and delete buffers to the piece table.
+    /// Used to flush all temporary changes before certain operations.
     fn persist_changes(&mut self) {
         self.persist_add_buffer(true);
         self.persist_delete_buffer();
     }
     
-    /// This function is called after every cursor movement, by persisting any changes made in the temporary buffers, 
-    /// updating the position of the temporary add buffer, and updating the lines map.
+    /// Called after every cursor movement.
+    /// Persists any changes in the temporary buffers, updates buffer positions, and updates the line map.
     fn do_after_move_cursor(&mut self) {
         self.persist_changes();
         self.temporary_add_buffer.update_position(self.text_position);
@@ -232,6 +249,7 @@ impl Editor {
     }
     
     /// Generates a map of line numbers to their lengths based on the current text.
+    /// Updates the internal lines_map field.
     fn update_lines_map(&mut self) {
         // This function updates the lines map based on the current content
         let mut lines_map: HashMap<usize, usize> = HashMap::new();
@@ -241,6 +259,7 @@ impl Editor {
         self.lines_map = lines_map;
     }
     
+    /// Sets the rightmost column value for the cursor.
     fn set_right_most_column(&mut self, column: u16) {
         self.right_most_column = column;
     }
