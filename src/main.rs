@@ -38,8 +38,8 @@ fn main() -> io::Result<()> {
     let initial_text = "Rita Marta";
 
     // let mut content = Editor::new(String::from("0123456789"), 5);
-    let mut content = Editor::new(String::from(initial_text), 5);
-    OutputManager::refresh_screen(&content)?;
+    let mut editor = Editor::new(String::from(initial_text), 5);
+    OutputManager::refresh_screen(&editor)?;
 
     loop {
         if poll(Duration::from_millis(1000))? {
@@ -57,9 +57,9 @@ fn main() -> io::Result<()> {
                         ..
                     } => {
                         if key == KeyCode::Delete && modifiers == KeyModifiers::CONTROL {
-                            content.delete_word(KeyCode::Delete);
+                            editor.delete_word(KeyCode::Delete);
                         } else {
-                            content.delete_char(key);
+                            editor.delete_char(key);
                         }
                     }
                     KeyEvent {
@@ -68,38 +68,38 @@ fn main() -> io::Result<()> {
                         ..
                     } => {
                         if modifiers == KeyModifiers::CONTROL {
-                            content.delete_word(KeyCode::Backspace);
+                            editor.delete_word(KeyCode::Backspace);
                         } else {
-                            content.add_char(key.as_char().unwrap_or(' '));
+                            editor.add_char(key.as_char().unwrap_or(' '));
                         }
                     }
                     KeyEvent {
                         code: KeyCode::Enter,
                         ..
                     } => {
-                        content.add_new_line();
+                        editor.add_new_line();
                     }
                     KeyEvent {
                         code: direction @ (KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down),
                         ..
                     } => {
                         match direction {
-                            KeyCode::Left => content.move_cursor_left(),
-                            KeyCode::Right => content.move_cursor_right(),
-                            // KeyCode::Up => content.move_cursor_up(),
-                            // KeyCode::Down => content.move_cursor_down(),
+                            KeyCode::Left => editor.move_cursor_left(),
+                            KeyCode::Right => editor.move_cursor_right(),
+                            KeyCode::Up => editor.move_cursor_up(),
+                            KeyCode::Down => editor.move_cursor_down(),
                             _ => unreachable!(),
                         }
                     }
                     _ => {
                         if let KeyCode::Char(c) = event.code {
-                            content.add_char(c);
+                            editor.add_char(c);
                         }
                     }
                 }
                 
                 if !stop_loop {
-                    OutputManager::refresh_screen(&content)?;
+                    OutputManager::refresh_screen(&editor)?;
                 } else {
                     break;
                 }
