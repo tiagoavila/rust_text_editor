@@ -7,7 +7,7 @@ use crossterm::{
     terminal::{self, size, Clear, ClearType},
 };
 
-use crate::editor::Editor;
+use crate::core::editor::Editor;
 
 pub struct OutputManager;
 

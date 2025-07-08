@@ -100,18 +100,22 @@ You can run the editor in three different ways:
 
 ```
 src/
-├── main.rs                 # Main application entry point
-├── editor.rs              # Core editor logic and state management
-├── piece_table.rs         # Piece table data structure implementation
-├── temporary_buffer_add.rs # Add buffer management
-├── temporary_buffer_deletion.rs # Delete buffer management
-├── output_manager.rs      # Terminal output and screen management
-├── position.rs            # Cursor position tracking
-├── cleanup.rs             # Terminal cleanup utilities
-├── text_trait.rs          # Text manipulation trait definitions
-├── enum_add_result.rs     # Result types for buffer operations
+├── main.rs                       # Main application entry point
+├── core/
+│   ├── editor.rs                 # Core editor logic and state management
+│   ├── piece_table.rs            # Piece table data structure implementation
+│   ├── position.rs               # Cursor position tracking
+│   └── text_trait.rs             # Text manipulation trait definitions
+├── buffer/
+│   ├── temporary_buffer_add.rs   # Add buffer management
+│   └── temporary_buffer_deletion.rs # Delete buffer management
+├── ui/
+│   ├── output_manager.rs         # Terminal output and screen management
+│   └── cleanup.rs                # Terminal cleanup utilities
+├── enums/
+│   └── enum_add_result.rs        # Result types for buffer operations
 └── images/
-    └── logo.png           # Project logo
+    └── logo.png                  # Project logo
 ```
 
 ## Dependencies

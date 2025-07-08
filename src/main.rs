@@ -6,27 +6,34 @@ use crossterm::{
 };
 use std::{fs, io, path::PathBuf, time::Duration};
 
-mod cleanup;
-mod content;
-mod editor;
-mod enum_add_result;
-mod output_manager;
-mod piece_table;
-mod position;
-mod temporary_buffer_add;
-mod temporary_buffer_deletion;
-mod text_trait;
+mod core {
+    pub mod editor;
+    pub mod piece_table;
+    pub mod position;
+    pub mod text_trait;
+}
+mod buffer {
+    pub mod temporary_buffer_add;
+    pub mod temporary_buffer_deletion;
+}
+mod ui {
+    pub mod output_manager;
+    pub mod cleanup;
+}
+mod enums {
+    pub mod enum_add_result;
+}
 
 mod prelude {
-    pub use crate::cleanup::*;
-    pub use crate::editor::*;
-    pub use crate::enum_add_result::*;
-    pub use crate::output_manager::*;
-    pub use crate::piece_table::*;
-    pub use crate::position::*;
-    pub use crate::temporary_buffer_add::*;
-    pub use crate::temporary_buffer_deletion::*;
-    pub use crate::text_trait::*;
+    pub use crate::buffer::temporary_buffer_add::*;
+    pub use crate::buffer::temporary_buffer_deletion::*;
+    pub use crate::core::editor::*;
+    pub use crate::core::piece_table::*;
+    pub use crate::core::position::*;
+    pub use crate::core::text_trait::*;
+    pub use crate::enums::enum_add_result::*;
+    pub use crate::ui::cleanup::*;
+    pub use crate::ui::output_manager::*;
 }
 
 use prelude::*;

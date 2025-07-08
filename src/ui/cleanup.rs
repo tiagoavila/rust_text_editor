@@ -3,7 +3,7 @@ use crossterm::
     terminal::{self}
 ;
 
-use crate::output_manager::OutputManager;
+use crate::ui::output_manager::OutputManager;
 
 pub struct CleanUp;
 
