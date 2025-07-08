@@ -57,9 +57,33 @@ cargo build --release
 ```
 
 ### Running
-```bash
-cargo run
-```
+
+You can run the editor in three different ways:
+
+1. **Single Line Mode** (default if no parameter is passed):
+   ```bash
+   cargo run
+   ```
+   or
+   ```bash
+   cargo run -- --single
+   ```
+
+2. **Multiple Lines Mode**:
+   ```bash
+   cargo run -- --multi
+   ```
+
+3. **Load Text from File**:
+   ```bash
+   cargo run -- --file text_samples/lorem_ipsum.txt
+   ```
+   or using an absolute path:
+   ```bash
+   cargo run -- --file /path/to/your/project/text_samples/lorem_ipsum.txt
+   ```
+   You can use either a relative or absolute path for the file.
+   Replace the path with the location of your desired text file.
 
 ### Controls
 - **Character Input**: Type normally to add characters
@@ -93,6 +117,7 @@ src/
 ## Dependencies
 
 - **crossterm**: Cross-platform terminal manipulation library
+- **clap**: Command-line argument parsing
 - **std**: Rust standard library for core functionality
 
 ## Development

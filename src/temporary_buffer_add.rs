@@ -8,11 +8,11 @@ pub struct TemporaryBufferAddText {
 }
 
 impl TemporaryBufferAddText {
-    pub fn new(max_length: usize, cursor_position: usize) -> Self {
+    pub fn new(max_length: usize, text_position: usize) -> Self {
         Self {
             buffer: String::new(),
             max_length,
-            position: cursor_position,
+            position: text_position,
         }
     }
 

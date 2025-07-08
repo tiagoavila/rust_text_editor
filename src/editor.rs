@@ -19,22 +19,22 @@ impl Editor {
     /// Creates a new Editor instance with the given initial text and temporary buffer size.
     /// Initializes the piece table, buffers, cursor position, and line map.
     pub fn new(text: String, temporary_buffer_max_length: usize) -> Self {
-        let mut cursor_position = 0; // Start at the end of the text
+        let mut text_position = 0; // Start at the end of the text
         if !text.is_empty() {
             // If the text is not empty, set the cursor position to the end of the text
-            cursor_position = text.len();
+            text_position = text.len();
         }
 
         let mut editor = Self {
             content: PieceTable::new(&text.clone()),
             temporary_add_buffer: TemporaryBufferAddText::new(
                 temporary_buffer_max_length,
-                cursor_position,
+                text_position,
             ),
             temporary_delete_buffer: TemporaryBufferDeleteText::new(temporary_buffer_max_length),
-            text_position: cursor_position,
+            text_position,
             cursor: Position {
-                x: cursor_position as u16,
+                x: 0,
                 y: 0,
             },
             lines_map: Vec::new(),
@@ -42,6 +42,13 @@ impl Editor {
         };
 
         editor.update_lines_map();
+
+        let last_line_length = editor.lines_map.last().cloned().unwrap_or(0);
+        editor.cursor = Position {
+            x: last_line_length as u16,
+            y: editor.lines_map.len() as u16 - 1, // Set cursor to the last line
+        };
+
         editor
     }
 
