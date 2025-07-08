@@ -62,8 +62,7 @@ fn main() -> io::Result<()> {
     } else if args.multi {
         multiple_lines_text.to_string()
     } else if let Some(path) = args.file {
-        println!("Loading text from file: {:?}", path);
-        fs::read_to_string(path).unwrap_or_else(|_| String::from("not found"))
+        fs::read_to_string(path).unwrap_or_else(|_| String::from("file not found"))
     } else {
         single_line_text.to_string()
     };
