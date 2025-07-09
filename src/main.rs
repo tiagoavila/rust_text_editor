@@ -1,4 +1,3 @@
-use clap::{ArgGroup};
 use clap::Parser;
 use crossterm::{
     event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers},
@@ -22,6 +21,7 @@ mod ui {
 }
 mod enums {
     pub mod enum_add_result;
+    pub mod text_action;
 }
 
 mod prelude {
@@ -34,6 +34,7 @@ mod prelude {
     pub use crate::enums::enum_add_result::*;
     pub use crate::ui::cleanup::*;
     pub use crate::ui::output_manager::*;
+    pub use crate::enums::text_action::*;
 }
 
 use prelude::*;
@@ -131,7 +132,9 @@ fn main() -> io::Result<()> {
                         _ => unreachable!(),
                     },
                     _ => {
-                        if let KeyCode::Char(c) = event.code {
+                        if event.code == KeyCode::Char('z') && event.modifiers == KeyModifiers::CONTROL {
+                            editor.undo_change();
+                        } else if let KeyCode::Char(c) = event.code {
                             editor.add_char(c);
                         }
                     }

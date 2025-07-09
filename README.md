@@ -19,6 +19,7 @@ A high-performance text editor written in Rust that implements efficient text ma
 - **Word Deletion**: Ctrl+Backspace and Ctrl+Delete for word-level deletion
 - **New Line Support**: Enter key to add new lines with proper cursor positioning
 - **Cursor Navigation**: Arrow keys for moving cursor left and right (up/down navigation prepared for future implementation)
+- **Undo Support**: The editor now supports undo actions only (redo is not available)
 
 ### Advanced Buffer Management
 - **Temporary Add Buffer**: Efficiently batches character insertions before persisting to the piece table
@@ -113,7 +114,8 @@ src/
 │   ├── output_manager.rs         # Terminal output and screen management
 │   └── cleanup.rs                # Terminal cleanup utilities
 ├── enums/
-│   └── enum_add_result.rs        # Result types for buffer operations
+│   ├── enum_add_result.rs        # Result types for buffer operations
+│   └── text_action.rs            # Enum for text actions (new)
 └── images/
     └── logo.png                  # Project logo
 ```

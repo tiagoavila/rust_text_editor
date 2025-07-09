@@ -52,7 +52,7 @@ impl OutputManager {
             stdout,
             MoveTo(0, height - 4),
             SetForegroundColor(Color::Cyan),
-            // Print(format!("Text: {:?}", text)),
+            Print(format!("Text: {:?}", text)),
             MoveTo(0, height - 3),
             SetForegroundColor(Color::Yellow),
             Print(format!(
