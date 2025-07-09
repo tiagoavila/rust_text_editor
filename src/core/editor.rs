@@ -1,10 +1,11 @@
 use crate::prelude::{
-    EnumAddResult, PieceTable, Position, TemporaryBufferAddText, TemporaryBufferDeleteText,
-    TextTrait,
+    EnumAddResult, PieceTable, Position, TemporaryBufferAddText, TemporaryBufferDeleteText, TextAction, TextTrait
 };
 use crossterm::event::KeyCode;
-use std::collections::HashMap;
 
+/// Represents a text editor that manages text content using a piece table and temporary buffers.
+/// The editor allows adding, deleting characters, and managing cursor position.
+/// It also maintains a map of lines to their lengths for efficient text rendering.
 pub struct Editor {
     content: PieceTable,
     pub text_position: usize,
@@ -13,6 +14,7 @@ pub struct Editor {
     pub cursor: Position,
     right_most_column: u16,
     pub lines_map: Vec<usize>,
+    text_actions: Vec<TextAction>,
 }
 
 impl Editor {
@@ -20,6 +22,7 @@ impl Editor {
     /// Initializes the piece table, buffers, cursor position, and line map.
     pub fn new(text: String, temporary_buffer_max_length: usize) -> Self {
         let mut text_position = 0; // Start at the end of the text
+
         if !text.is_empty() {
             // If the text is not empty, set the cursor position to the end of the text
             text_position = text.len();
@@ -39,6 +42,7 @@ impl Editor {
             },
             lines_map: Vec::new(),
             right_most_column: 0,
+            text_actions: Vec::new(),
         };
 
         editor.update_lines_map();
@@ -256,7 +260,6 @@ impl Editor {
     /// current cursor position.
     pub fn persist_add_buffer(&mut self, force_save: bool) {
         if self.temporary_add_buffer.buffer.is_empty() {
-            // If the buffer is empty, we can skip persisting
             return;
         }
 
@@ -269,7 +272,36 @@ impl Editor {
                 self.temporary_add_buffer.position,
             );
 
+            self.text_actions.push(TextAction::Add {
+                text: self.temporary_add_buffer.buffer.clone(),
+                position: self.temporary_add_buffer.position,
+            });
+
             self.temporary_add_buffer.clear(self.text_position);
+        }
+    }
+    
+    /// Undoes the last text change made in the editor.
+    pub fn undo_change(&mut self) {
+        // Persist any changes in the temporary buffers before undoing
+        self.persist_changes();
+
+        if let Some(last_action) = self.text_actions.pop() {
+            match last_action {
+                TextAction::Add { text, position } => {
+                    let _ = self.content.delete_text(position, position + text.len());
+                    self.text_position = position;
+                    self.cursor.x = self.cursor.x.saturating_sub(text.len() as u16);
+                }
+                TextAction::Delete { text, position } => {
+                    let _ = self.content.add_text(&text, position);
+                    self.text_position = position + text.len();
+                    self.cursor.x = self.cursor.x.saturating_add(text.len() as u16);
+                }
+            }
+
+            self.temporary_add_buffer.update_position(self.text_position);
+            self.set_right_most_column(self.cursor.x);
         }
     }
 
@@ -277,7 +309,15 @@ impl Editor {
     /// Deletes the text range from the piece table and clears the delete buffer.
     fn persist_delete_buffer(&mut self) {
         if let Some((start, end)) = self.temporary_delete_buffer.get_deletion_range() {
+            let text_to_delete = self.content.get_text().get(start..end).unwrap_or_default().to_string();
+
             let _ = self.content.delete_text(start, end);
+            
+            self.text_actions.push(TextAction::Delete {
+                text: text_to_delete,
+                position: start,
+            });
+
             self.temporary_delete_buffer.clear();
         }
     }

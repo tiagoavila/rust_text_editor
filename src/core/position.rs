@@ -4,10 +4,6 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn new() -> Self {
-        Self { x: 0, y: 0 }
-    }
-    
     pub fn move_left(&mut self) {
         if self.x > 0 {
             self.x -= 1;
